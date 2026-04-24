@@ -1,0 +1,6 @@
+psutil>=5.9.0
+scapy>=2.5.0
+rich>=13.0.0
+requests>=2.31.0
+websocket-client>=1.6.0
+python-socketio>=5.11.0
