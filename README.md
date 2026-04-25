@@ -17,13 +17,13 @@
 
 ### Key Features
 
-- **Real-time Wireless Monitoring** - Continuous scanning and analysis of WiFi networks
-- **Advanced Threat Detection** - Rogue APs, Evil Twins, Deauthentication attacks
-- **Active Prevention** - Automated countermeasures against confirmed threats
-- **Comprehensive Dashboard** - Modern web interface with real-time analytics
-- **Universal Compatibility** - Works on any Linux distribution
-- **High Performance** - Optimized for minimal resource usage
-- **Enterprise Security** - Role-based access control and audit logging
+**Real-time Wireless Monitoring** - Continuous scanning and analysis of WiFi networks
+**Advanced Threat Detection** - Rogue APs, Evil Twins, Deauthentication attacks
+**Active Prevention** - Automated countermeasures against confirmed threats
+**Comprehensive Dashboard** - Modern web interface with real-time analytics
+**Universal Compatibility** - Works on any Linux distribution
+**High Performance** - Optimized for minimal resource usage
+**Enterprise Security** - Role-based access control and audit logging
 
 ---
 
@@ -31,10 +31,10 @@
 
 ### Prerequisites
 
-- **Linux System** (Ubuntu, Debian, Fedora, Arch, AntiX, Kali, etc.)
-- **Wireless Adapter** with monitor mode support
-- **Root/Sudo Access** for network operations
-- **2GB+ RAM** and **2GB+ Disk Space**
+**Linux System** (Ubuntu, Debian, Fedora, Arch, AntiX, Kali, etc.)
+**Wireless Adapter** with monitor mode support
+**Root/Sudo Access** for network operations
+**2GB+ RAM** and **2GB+ Disk Space**
 
 - **Installation**
 
@@ -52,41 +52,27 @@ chmod +x delete-cache.sh
 sudo ./delete-cache.sh
 ```
 
-- ZeinaGuard can:
-- Detect your Linux distribution
-- Install all dependencies
-- Configure the database
-- Start all services
-- Launch the web interface
-
 ### Access Your System
 
-- **Web Dashboard**: http://localhost:3000
-- **API Endpoint**: http://localhost:5000
+**Web Dashboard**: http://localhost:3000
+**API Endpoint**: http://localhost:5000
 
-- **Hardware Requirements**
+**Hardware Requirements**
 
-- **CPU**: 1+ cores (2+ recommended)
-- **RAM**: 512MB minimum (2GB recommended)
-- **Storage**: 2GB free space
-- **Network**: Wireless adapter with monitor mode
-- **Permissions**: Root/sudo access
+**CPU**: 1+ cores (2+ recommended)
+**RAM**: 512MB minimum (2GB recommended)
+**Storage**: 2GB free space
+**Network**: Wireless adapter with monitor mode
+**Permissions**: Root/sudo access
 
-- **Recommended Hardware**
+**Recommended Hardware**
 
-- **Alfa AWUS036ACH** - High performance monitor mode
-- **TP-Link TL-WN722N v1** - Budget-friendly option
-- **Panda PAU09** - Dual-band support
-- **Generic USB WiFi** - Most adapters work
+**Alfa AWUS036ACH** - High performance monitor mode
+**TP-Link TL-WN722N v1** - Budget-friendly option
+**Panda PAU09** - Dual-band support
+**Generic USB WiFi** - Most adapters work
 
----
-
-- **Issues**: [GitHub Issues](https://github.com/ln0rag/zeinaguard/issues)
-- **Support**: https://t.me/ln0rag
-
----
-
-- **Contributing**
+**Contributing**
 
 1. **Fork** the repository
 2. **Create** a feature branch
@@ -94,15 +80,15 @@ sudo ./delete-cache.sh
 4. **Test** thoroughly
 5. **Submit** a pull request
 
-- **Development Guidelines**
+**Development Guidelines**
 
-- **Code Quality**: Follow PEP 8 and ESLint standards
-- **Testing**: Add tests for new features
-- **Security**: Report vulnerabilities responsibly
+**Code Quality**: Follow PEP 8 and ESLint standards
+**Testing**: Add tests for new features
+**Security**: Report vulnerabilities responsibly
 
 ---
 
-- **License**
+**License**
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
