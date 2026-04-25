@@ -11,32 +11,19 @@
 
 </div>
 
-## Overview
+## **Overview**
 
 **ZeinaGuard** is a comprehensive **Wireless Intrusion Detection & Prevention System (WIDPS)** that provides real-time monitoring, analysis, and protection against wireless security threats. Built with cutting-edge technology and designed for both security professionals and network administrators.
 
-### Key Features
-
-**Real-time Wireless Monitoring** - Continuous scanning and analysis of WiFi networks
-**Advanced Threat Detection** - Rogue APs, Evil Twins, Deauthentication attacks
-**Active Prevention** - Automated countermeasures against confirmed threats
-**Comprehensive Dashboard** - Modern web interface with real-time analytics
-**Universal Compatibility** - Works on any Linux distribution
-**High Performance** - Optimized for minimal resource usage
-**Enterprise Security** - Role-based access control and audit logging
-
----
-
-## Quick Start
-
-### Prerequisites
-
+### **Prerequisites**
+```
 **Linux System** (Ubuntu, Debian, Fedora, Arch, AntiX, Kali, etc.)
 **Wireless Adapter** with monitor mode support
 **Root/Sudo Access** for network operations
 **2GB+ RAM** and **2GB+ Disk Space**
+```
 
-- **Installation**
+### **Installation**
 
 ```bash
 git clone https://github.com/ln0rag/zeinaguard.git
@@ -45,34 +32,35 @@ chmod +x zeina.sh
 sudo ./zeina.sh
 ```
 
-- **Cache Cleanup**
+### **Cache Cleanup**
 
 ```bash
 chmod +x delete-cache.sh
 sudo ./delete-cache.sh
 ```
 
-### Access Your System
-
+### **Access Your System**
+```
 **Web Dashboard**: http://localhost:3000
 **API Endpoint**: http://localhost:5000
+```
 
-**Hardware Requirements**
-
+#### **Hardware Requirements**
+```
 **CPU**: 1+ cores (2+ recommended)
 **RAM**: 512MB minimum (2GB recommended)
 **Storage**: 2GB free space
 **Network**: Wireless adapter with monitor mode
 **Permissions**: Root/sudo access
-
-**Recommended Hardware**
-
+```
+#### **Recommended Hardware**
+```
 **Alfa AWUS036ACH** - High performance monitor mode
 **TP-Link TL-WN722N v1** - Budget-friendly option
 **Panda PAU09** - Dual-band support
 **Generic USB WiFi** - Most adapters work
-
-**Contributing**
+```
+#### **Contributing**
 
 1. **Fork** the repository
 2. **Create** a feature branch
@@ -80,15 +68,15 @@ sudo ./delete-cache.sh
 4. **Test** thoroughly
 5. **Submit** a pull request
 
-**Development Guidelines**
-
+#### **Development Guidelines**
+```
 **Code Quality**: Follow PEP 8 and ESLint standards
 **Testing**: Add tests for new features
 **Security**: Report vulnerabilities responsibly
-
+```
 ---
 
-**License**
+#### **License**
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
@@ -96,7 +84,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 <div align="center">
 
-**Protect Your Wireless Networks with ZeinaGuard**
+#### **Protect Your Wireless Networks with ZeinaGuard**
 
 [ Star on GitHub ](https://github.com/ln0rag/zeinaguard) • [ Report Issues ](https://github.com/ln0rag/zeinaguard/issues)
 
