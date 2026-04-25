@@ -88,6 +88,4 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 [ Star on GitHub ](https://github.com/ln0rag/zeinaguard) • [ Report Issues ](https://github.com/ln0rag/zeinaguard/issues)
 
-Made for the cybersecurity community
-
 </div>
