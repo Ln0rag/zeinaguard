@@ -1,5 +1,5 @@
 ![](screenshot.png)
-# ZeinaGuard - Wireless Intrusion Detection & Prevention System
+# Wireless Intrusion Detection & Prevention System
 
 <div align="center">
 
@@ -8,6 +8,8 @@
 ![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
 ![Python](https://img.shields.io/badge/python-3.11+-blue?style=for-the-badge&logo=python)
 ![Node.js](https://img.shields.io/badge/node.js-20.x-green?style=for-the-badge&logo=node.js)
+
+</div>
 
 ## Overview
 
