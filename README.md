@@ -17,10 +17,10 @@
 
 ### **Prerequisites**
 ```
-**Linux System** (Ubuntu, Debian, Fedora, Arch, AntiX, Kali, etc.)
-**Wireless Adapter** with monitor mode support
-**Root/Sudo Access** for network operations
-**2GB+ RAM** and **2GB+ Disk Space**
+Linux System: (Ubuntu, Debian, Fedora, Arch, AntiX, Kali, etc.)
+Wireless Adapter: with monitor mode support
+Root/Sudo: Access for network operations
+2GB+ RAM and 2GB+ Disk Space
 ```
 
 ### **Installation**
@@ -41,24 +41,24 @@ sudo ./delete-cache.sh
 
 ### **Access Your System**
 ```
-**Web Dashboard**: http://localhost:3000
-**API Endpoint**: http://localhost:5000
+Web Dashboard: http://localhost:3000
+API Endpoint: http://localhost:5000
 ```
 
 #### **Hardware Requirements**
 ```
-**CPU**: 1+ cores (2+ recommended)
-**RAM**: 512MB minimum (2GB recommended)
-**Storage**: 2GB free space
-**Network**: Wireless adapter with monitor mode
-**Permissions**: Root/sudo access
+CPU: 1+ cores (2+ recommended)
+RAM: 512MB minimum (2GB recommended)
+Storage: 2GB free space
+Network: Wireless adapter with monitor mode
+Permissions: Root/sudo access
 ```
 #### **Recommended Hardware**
 ```
-**Alfa AWUS036ACH** - High performance monitor mode
-**TP-Link TL-WN722N v1** - Budget-friendly option
-**Panda PAU09** - Dual-band support
-**Generic USB WiFi** - Most adapters work
+Alfa AWUS036ACH: High performance monitor mode
+TP-Link TL-WN722N v1: Budget-friendly option
+Panda PAU09: Dual-band support
+Generic USB WiFi: Most adapters work
 ```
 #### **Contributing**
 
@@ -70,9 +70,9 @@ sudo ./delete-cache.sh
 
 #### **Development Guidelines**
 ```
-**Code Quality**: Follow PEP 8 and ESLint standards
-**Testing**: Add tests for new features
-**Security**: Report vulnerabilities responsibly
+Code Quality: Follow PEP 8 and ESLint standards
+Testing: Add tests for new features
+Security: Report vulnerabilities responsibly
 ```
 ---
 
