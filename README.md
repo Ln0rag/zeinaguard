@@ -9,14 +9,6 @@
 ![Python](https://img.shields.io/badge/python-3.11+-blue?style=for-the-badge&logo=python)
 ![Node.js](https://img.shields.io/badge/node.js-20.x-green?style=for-the-badge&logo=node.js)
 
-**Advanced Wireless Security Monitoring & Threat Prevention**
-
-[ Quick Start ](#-quick-start) • [ Documentation ](#-documentation) • [ Configuration ](#-configuration) • [ Deployment ](#-deployment)
-
-</div>
-
----
-
 ## Overview
 
 **ZeinaGuard** is a comprehensive **Wireless Intrusion Detection & Prevention System (WIDPS)** that provides real-time monitoring, analysis, and protection against wireless security threats. Built with cutting-edge technology and designed for both security professionals and network administrators.
