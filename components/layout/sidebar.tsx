@@ -20,9 +20,7 @@ export function Sidebar() {
     { href: '/threats', label: 'Threats', icon: AlertTriangle },
     { href: '/sensors', label: 'Sensors', icon: Wifi },
     { href: '/topology', label: 'Network Map', icon: Network },
-    { href: '/alerts', label: 'Alerts', icon: Bell },
     { href: '/incidents', label: 'Incidents', icon: BarChart3 },
-    { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
   return (

@@ -1,5 +1,6 @@
 """
 ZeinaGuard Flask backend entrypoint.
+Cleaned version: Removed Alerts routes and optimized for real-time status.
 """
 
 from __future__ import annotations
@@ -139,6 +140,7 @@ def initialize_database():
 def register_routes(app):
     @app.route("/health", methods=["GET"])
     def health():
+        """Endpoint for frontend to check system status and connectivity."""
         realtime_status = get_realtime_status()
         return jsonify(
             {
@@ -224,7 +226,10 @@ def create_app(config_object=None):
         initialize_database()
 
     app.socketio = init_socketio(app)
+    
+    # 🔴 تنبيه: تأكد من حذف تسجيل 'alerts_blueprint' من داخل هذه الدالة في ملف routes.py
     register_blueprints(app)
+    
     register_routes(app)
     logger.info("[App] Startup completed")
 
