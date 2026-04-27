@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, AlertTriangle, ArrowUpDown, Radio, Wifi, WifiOff, Zap, Server, Shield, Target, Clock, Search, X, Loader2 } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { Activity, AlertTriangle, ArrowUpDown, Radio, Wifi, WifiOff, Zap, Server, Shield, Target, Clock, Search, X, Loader2, Sun, Moon, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -149,6 +150,11 @@ function normalizeNetwork(network: LiveNetworkEvent): LiveNetworkEvent {
 
 
 export function LiveNetworkConsole() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [networks, setNetworks] = useState<LiveNetworkEvent[]>([]);
   const [sensorStatuses, setSensorStatuses] = useState<SensorStatusEvent[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
@@ -505,8 +511,8 @@ export function LiveNetworkConsole() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
               {/* Left Section: Title & Search */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1 w-full">
-                <CardTitle className="text-white text-xl font-bold tracking-tight whitespace-nowrap">
-                  ZeinaGuard Live
+                <CardTitle className="text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.7)] text-xl font-bold tracking-tight whitespace-nowrap">
+                ZeinaGuard
                 </CardTitle>
 
                 <div className="relative w-full flex-1">

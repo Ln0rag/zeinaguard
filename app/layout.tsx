@@ -2,12 +2,11 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from 'next-themes'
-// 🔴 شلنا الـ NotificationProvider لأنه غالباً اتمسح مع الإعدادات
 import '@/styles/globals.css'
 
 const geistSans = Geist({
   subsets: ["latin"],
-  variable: "--font-sans", // تعريف المتغير للخط
+  variable: "--font-sans",
 });
 
 const geistMono = Geist_Mono({
@@ -17,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'ZeinaGuard',
-  description: 'Rogue Access Points Detection and Prevention System',
+  description: 'Wireless Intrusion Detection & Prevention System',
 }
 
 export default function RootLayout({
@@ -27,15 +26,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* تطبيق الخطوط والـ Variables على الـ body */}
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         <ThemeProvider 
           attribute="class" 
-          defaultTheme="system" // خليناه نظام عشان يطابق الجهاز أوتوماتيك
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
-          {/* شلنا الـ NotificationProvider عشان ميعملش Error "Module not found" */}
           <main>
             {children}
           </main>
@@ -43,7 +40,7 @@ export default function RootLayout({
           <Toaster 
             position="bottom-center"
             richColors
-            theme="system"
+            theme="dark"
           />
         </ThemeProvider>
       </body>

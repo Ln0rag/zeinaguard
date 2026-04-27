@@ -125,19 +125,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* Hide Next.js DevTools indicator */
-#devtools-indicator, 
-[data-nextjs-toast],
-.nextjs-toast,
-[data-nextjs-dev-tools],
-[data-next-badge-root],
-[data-next-badge],
-#next-logo {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-}
