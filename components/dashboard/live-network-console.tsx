@@ -144,10 +144,14 @@ function normalizeNetwork(network: LiveNetworkEvent): LiveNetworkEvent {
     ...network,
     bssid: String(network.bssid || '').toUpperCase(),
     classification: network.classification ?? 'LEGIT',
+    score: network.score ?? 0,
+    sensor_id: network.sensor_id ?? 0,
+    channel: network.channel ?? 0,    // لو القناة نل هنخليها صفر
+    frequency: network.frequency ?? 0, // لو التردد نل هنخليه صفر
+    reasons: network.reasons ?? [],
     last_seen: network.last_seen || network.timestamp || new Date().toISOString(),
   };
 }
-
 
 export function LiveNetworkConsole() {
   const { theme, setTheme } = useTheme();
@@ -651,12 +655,7 @@ export function LiveNetworkConsole() {
                       <tr className="border-b border-emerald-500/20 bg-emerald-950/10 backdrop-blur-sm">
                         <th className="px-3 py-3 text-left">
                           <button onClick={() => handleSort('ssid')} className="flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
-                            SSID <ArrowUpDown className="h-3 w-3" />
-                          </button>
-                        </th>
-                        <th className="px-3 py-3 text-left">
-                          <button onClick={() => handleSort('bssid')} className="flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
-                            BSSID <ArrowUpDown className="h-3 w-3" />
+                            WiFi <ArrowUpDown className="h-3 w-3" />
                           </button>
                         </th>
                         <th className="px-3 py-3 text-left">
@@ -686,13 +685,32 @@ export function LiveNetworkConsole() {
                           }`}
                         >
                           <td className="px-3 py-4">
-                            <div className="font-semibold text-emerald-50 text-base truncate drop-shadow-[0_0_5px_rgba(16,185,129,0.2)]">
-                              {network.ssid || 'Hidden'}
-                            </div>
-                          </td>
-                          <td className="px-3 py-4">
-                            <div className="font-mono text-sm text-emerald-400/80 bg-emerald-950/30 border border-emerald-500/20 rounded px-2 py-1 inline-block truncate">
-                              {network.bssid}
+                            <div className="flex flex-col gap-1">
+                              {/* السطر الأول: الاسم + التردد */}
+                              <div className="flex items-center gap-2">
+                                <div className="flex flex-col">
+                                <span className="font-semibold text-emerald-50 text-base truncate drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">
+                                  {network.ssid || 'Hidden'}
+                                </span>
+                                {/* عرض أسباب التهديد بخط صغير نيون */}
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {network.reasons?.map((reason, i) => (
+                                    <span key={i} className="text-[10px] px-1 bg-red-500/10 text-red-400/80 border border-red-500/20 rounded font-medium">
+                                      {reason}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                                {/* التردد بحجم صغير وستايل نيون خافت */}
+                                <span className="text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-500/60 font-mono tracking-tighter">
+                                  {network.frequency ? `${(network.frequency / 1000).toFixed(1)}GHz` : '2.4GHz'}
+                                </span>
+                              </div>
+                              
+                              {/* السطر الثاني: الماك أدرس - توضيح اللون والحجم */}
+                              <div className="font-mono text-xs text-emerald-400/70 tracking-widest mt-0.5 bg-emerald-500/5 px-1 rounded w-fit border border-emerald-500/10">
+                                {network.bssid}
+                              </div>
                             </div>
                           </td>
                           <td className="px-3 py-4">
@@ -705,9 +723,9 @@ export function LiveNetworkConsole() {
                             </div>
                           </td>
                           <td className="px-3 py-4">
-                            <span className={`rounded-full px-3 py-1 text-sm font-semibold shadow-sm ${classificationClasses(network.classification)}`}>
-                              {network.classification}
-                            </span>
+                          <span className={`rounded-full px-3 py-1 text-sm font-semibold shadow-sm ${classificationClasses(network.classification)}`}>
+                            {network.classification}
+                          </span>
                           </td>
                           <td className="px-3 py-4">
                             <div className="text-base text-emerald-100/60">

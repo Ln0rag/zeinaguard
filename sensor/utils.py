@@ -109,11 +109,12 @@ def get_auth_type(packet):
 def get_wps_info(packet):
     elt = packet.getlayer(Dot11Elt)
     while elt:
+        # البحث عن حزمة الـ WPS (Vendor Specific: Microsoft/Wi-Fi Alliance)
         if elt.ID == 221 and elt.info.startswith(b"\x00P\xf2\x04"):
-            return "V1.0 (PBC/PIN)"
+            # بنرجع نص واضح عشان الـ RiskEngine يفهمه
+            return "V1.0 (PIN/PBC Enabled)"
         elt = elt.payload.getlayer(Dot11Elt)
-    return "N/A"
-
+    return "Disabled"
 
 def get_manufacturer(mac):
     oui = _normalize_oui(mac)

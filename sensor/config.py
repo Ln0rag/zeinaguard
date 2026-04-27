@@ -13,29 +13,11 @@ LOCKED_CHANNEL = None
 INTERFACE = None
 
 # TRUSTED_APS - Whitelist of known trusted wireless networks
-# Add new networks by copying the block below and editing values only.
-
-TRUSTED_APS = {
-    "2.4ghz": {
-        "bssid": [
-            "38:54:9B:36:F7:BC",
-        ],
-        "channel": 10,
-        "encryption": "WPA2",
-    },
-
-    # =========================
-    # Add new network here
-    # =========================
-    # "NETWORK_NAME": {
-    #     "bssid": [
-    #         "XX:XX:XX:XX:XX:XX",
-    #         "YY:YY:YY:YY:YY:YY",   # optional (multiple APs)
-    #     ],
-    #     "channel": 1,
-    #     "encryption": "WPA2",
-    # },
-}
+TRUSTED_BSSIDS = [
+    "38:54:9B:36:F7:BC", # name:2.4ghz
+    "60:E3:27:67:90:E8", # name:0
+    "B0:95:75:0B:A6:DA", # name:AHMED
+]
 
 
 DEAUTH_COUNT = int(os.getenv("DEAUTH_COUNT", "40"))

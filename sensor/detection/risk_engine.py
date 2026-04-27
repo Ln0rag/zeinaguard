@@ -1,98 +1,95 @@
 class RiskEngine:
-    def __init__(self, trusted_aps=None):
-        if trusted_aps is None:
-            from config import TRUSTED_APS
-            self.trusted_aps = TRUSTED_APS
+    def __init__(self, trusted_bssids=None):
+        if trusted_bssids is None:
+            try:
+                from config import TRUSTED_BSSIDS
+                self.trusted_bssids = [mac.lower() for mac in TRUSTED_BSSIDS]
+            except ImportError:
+                self.trusted_bssids = []
         else:
-            self.trusted_aps = trusted_aps
-
-    def normalize_ssid(self, ssid):
-        if not ssid:
-            return ""
-        return ssid.strip().lower().replace("_5g", "").replace("-5g", "")
+            self.trusted_bssids = [mac.lower() for mac in trusted_bssids]
 
     def analyze(self, event):
         score = 0
         reasons = []
+        has_vulnerability = False # علامة تنبيه داخلية
 
-        ssid_raw = event.get("ssid") or ""
-        ssid = self.normalize_ssid(ssid_raw)
-
+        # استخراج البيانات الأساسية
         bssid = (event.get("bssid") or "").lower()
-        channel = event.get("channel")
-        signal = event.get("signal")
         encryption = (event.get("encryption") or "").upper()
+        auth_type = (event.get("auth") or "").upper()
+        wps_info = (event.get("wps") or "").upper()
         clients = event.get("clients", 0)
+        signal = event.get("signal")
+        is_trusted = bssid in self.trusted_bssids
 
-        # =========================
-        # Trusted AP CHECK (HARD OVERRIDE)
-        # =========================
-        trusted_key = None
+        # ==========================================
+        # 1. تقييم الثغرات (حساب السكور العادي)
+        # ==========================================
+        
+        # فحص الشبكة المفتوحة
+        if encryption == "OPEN":
+            score += 60
+            reasons.append("CRITICAL: Unencrypted Communication")
+            has_vulnerability = True
+        
+        # فحص الـ WPS
+        if "V1.0" in wps_info or "PBC" in wps_info or "PIN" in wps_info:
+            score += 25
+            reasons.append("VULNERABLE: WPS Enabled")
+            has_vulnerability = True
 
-        for key in self.trusted_aps:
-            if self.normalize_ssid(key) == ssid:
-                trusted_key = key
-                break
+        # فحص البروتوكولات القديمة
+        if "WEP" in auth_type:
+            score += 40
+            reasons.append("HIGH: WEP detected")
+            has_vulnerability = True
+        elif "WPA" in auth_type and "WPA2" not in auth_type:
+            score += 15
+            reasons.append("MEDIUM: Legacy WPA1 detected")
+            has_vulnerability = True
 
-        if trusted_key:
-            trusted = self.trusted_aps[trusted_key]
+        # إضافة سكور النشاط والقرب
+        if clients > 0:
+            score += 10
+        if signal is not None and signal > -45:
+            score += 5
 
-            return {
-                "classification": "LEGIT",
-                "score": 0,
-                "reasons": ["Trusted network (whitelisted)"],
-                "ssid": ssid_raw,
-                "bssid": bssid,
-                "channel": channel,
-                "signal": signal,
-                "encryption": encryption,
-                "clients": clients,
-                "manufacturer": event.get("manufacturer", "Unknown"),
-                "uptime": event.get("uptime", ""),
-                "auth": event.get("auth", ""),
-                "wps": event.get("wps", ""),
-                "distance": event.get("distance", -1),
-                "raw_beacon": event.get("raw_beacon", ""),
-            }
+        # ضريبة "الغريب"
+        if not is_trusted:
+            score += 10
+            reasons.append("Identity: External Device")
 
-        # =========================
-        # Unknown networks scoring
-        # =========================
-        score += 3
-        reasons.append("SSID not trusted")
+        # ==========================================
+        # 2. منطق التصنيف الجديد (الحصانة لشبكتك)
+        # ==========================================
+        # هنا بنحدد اللون (Classification)
+        if is_trusted:
+            # شبكتك داااايماً LEGIT (أخضر) مهما حصل
+            classification = "LEGIT"
+            # لو فيها ثغرة، بنضيف تنبيه واضح في أول الأسباب
+            if has_vulnerability:
+                reasons.insert(0, "⚠️ CONFIG ALERT: Weak Security Settings")
+        else:
+            # جيرانك وأي حد غريب بيمشي بالنظام العادي (أصفر أو أحمر)
+            if score >= 50:
+                classification = "ROGUE"
+            else:
+                classification = "SUSPICIOUS"
 
-        if encryption == "OPEN" and clients > 0:
-            score += 3
-            reasons.append("Open network with clients")
+        return self._build_result(event, score, reasons, is_trusted, classification)
 
-        if signal is not None and signal > -25:
-            score += 1
-            reasons.append("Very strong signal")
-
-        return self._build_result(event, score, reasons)
-
-    def _build_result(self, event, score, reasons):
+    def _build_result(self, event, score, reasons, is_trusted, classification):
         return {
-            "classification": self.classify(score),
-            "score": score,
+            "classification": classification, # اللون اللي هيظهر
+            "score": min(score, 100),
             "reasons": reasons,
-            "ssid": event.get("ssid"),
+            "ssid": event.get("ssid") or "Hidden",
             "bssid": event.get("bssid"),
             "channel": event.get("channel"),
             "signal": event.get("signal"),
             "encryption": event.get("encryption"),
             "clients": event.get("clients", 0),
             "manufacturer": event.get("manufacturer", "Unknown"),
-            "uptime": event.get("uptime", ""),
-            "auth": event.get("auth", ""),
-            "wps": event.get("wps", ""),
-            "distance": event.get("distance", -1),
-            "raw_beacon": event.get("raw_beacon", ""),
+            "is_trusted": is_trusted
         }
-
-    def classify(self, score):
-        if score >= 6:
-            return "ROGUE"
-        elif score >= 3:
-            return "SUSPICIOUS"
-        return "LEGIT"

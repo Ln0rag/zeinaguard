@@ -73,13 +73,15 @@ class ThreatManager:
 
             self.last_status[bssid] = status
 
-            if status in ["SUSPICIOUS", "ROGUE"]:
+            # أي حاجة سكورها عالي أو تصنيفها خطر تتبعت فوراً للداشبورد
+            if status in ["SUSPICIOUS", "ROGUE"] or score > 40:
                 threat = {
                     "status": status,
                     "score": score,
                     "reasons": reasons,
                     "event": event_summary,
                 }
+                # ... باقي الكود كما هو
 
                 now = time.time()
                 if bssid not in self.last_sent or now - self.last_sent[bssid] > self.cooldown:

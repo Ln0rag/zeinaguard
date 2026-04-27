@@ -3,21 +3,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-
+// تعريف واجهة بيانات الشبكة الموحدة (Interface)
 export interface LiveNetworkEvent {
-  sensor_id: number;
   ssid: string;
   bssid: string;
-  signal: number | null;
   channel: number | null;
-  classification: 'ROGUE' | 'SUSPICIOUS' | 'LEGIT';
-  last_seen: string;
+  signal: number | null;
+  classification: 'LEGIT' | 'SUSPICIOUS' | 'ROGUE';
+  score: number;
+  sensor_id: number;
+  is_trusted: boolean;
+  reasons: string[];
+  frequency?: number | null;
+  manufacturer?: string | null;
   timestamp?: string;
-  manufacturer: string | null;
-  clients?: Array<{
-    mac: string;
-    type?: string | null;
-  }>;
+  last_seen: string;
+  distance?: number | string;
+  clients?: any[];
+  clients_count?: number;
 }
 
 export interface NetworkSnapshotEvent {
@@ -25,18 +28,15 @@ export interface NetworkSnapshotEvent {
   data: LiveNetworkEvent[];
 }
 
-type NetworkSnapshotPayload =
+export type NetworkSnapshotPayload =
   | NetworkSnapshotEvent
   | LiveNetworkEvent[];
 
+// تعريف حدث حذف الشبكة
 export interface NetworkRemovedEvent {
+  sensor_id?: number;
   bssid: string;
-}
-
-export interface NetworkRemovedEvent {
-  sensor_id: number;
-  bssid: string;
-  timestamp: string;
+  timestamp?: string;
 }
 
 export interface ThreatEvent {
@@ -122,7 +122,6 @@ interface UseSocketOptions {
   autoConnect?: boolean;
 }
 
-
 const SOCKET_EVENTS = [
   'network_snapshot',
   'networks_snapshot',
@@ -135,7 +134,6 @@ const SOCKET_EVENTS = [
   'attack_ack',
   'threat_event',
 ] as const;
-
 
 function resolveSocketUrl(): string {
   return (
@@ -151,7 +149,6 @@ function normalizeLastSeen(value: unknown): string {
     const timestamp = value > 1_000_000_000_000 ? value : value * 1000;
     return new Date(timestamp).toISOString();
   }
-
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (/^\d+$/.test(trimmed)) {
@@ -159,13 +156,11 @@ function normalizeLastSeen(value: unknown): string {
       const timestamp = numericValue > 1_000_000_000_000 ? numericValue : numericValue * 1000;
       return new Date(timestamp).toISOString();
     }
-
     const parsed = new Date(trimmed);
     if (!Number.isNaN(parsed.getTime())) {
       return parsed.toISOString();
     }
   }
-
   return new Date().toISOString();
 }
 
@@ -178,30 +173,20 @@ function normalizeClassification(value: unknown): LiveNetworkEvent['classificati
 }
 
 function normalizeClients(value: unknown): LiveNetworkEvent['clients'] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((client) => {
-      if (!client || typeof client !== 'object') {
-        return null;
-      }
-
-      const clientRecord = client as Record<string, unknown>;
-      const mac = String(clientRecord.mac || '').trim().toUpperCase();
-      if (!mac) {
-        return null;
-      }
-
-      return {
-        mac,
-        type: String(clientRecord.type || 'device').trim().toLowerCase() || 'device',
-      };
-    })
-    .filter((client): client is NonNullable<typeof client> => Boolean(client));
+  if (!Array.isArray(value)) return [];
+  return value.map((client) => {
+    if (!client || typeof client !== 'object') return null;
+    const clientRecord = client as Record<string, unknown>;
+    const mac = String(clientRecord.mac || '').trim().toUpperCase();
+    if (!mac) return null;
+    return {
+      mac,
+      type: String(clientRecord.type || 'device').trim().toLowerCase() || 'device',
+    };
+  }).filter((client): client is NonNullable<typeof client> => Boolean(client));
 }
 
+// الدالة الجوهرية لضبط بيانات كل شبكة
 function normalizeNetworkItem(item: unknown): LiveNetworkEvent {
   const network = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
   const lastSeen = normalizeLastSeen(network.last_seen ?? network.timestamp);
@@ -212,11 +197,19 @@ function normalizeNetworkItem(item: unknown): LiveNetworkEvent {
     bssid: String(network.bssid || '').trim().toUpperCase(),
     signal: typeof network.signal === 'number' ? network.signal : network.signal == null ? null : Number(network.signal),
     channel: typeof network.channel === 'number' ? network.channel : network.channel == null ? null : Number(network.channel),
+    frequency: typeof network.frequency === 'number' ? network.frequency : network.frequency == null ? null : Number(network.frequency),
     classification: normalizeClassification(network.classification),
+    
+    // تأمين ظهور السكور والأسباب والحصانة لشبكتك
+    score: Number(network.score || 0),
+    is_trusted: Boolean(network.is_trusted || false),
+    reasons: Array.isArray(network.reasons) ? network.reasons : [],
+    
     last_seen: lastSeen,
     timestamp: typeof network.timestamp === 'string' ? network.timestamp : lastSeen,
     manufacturer: network.manufacturer == null ? null : String(network.manufacturer),
     clients: normalizeClients(network.clients),
+    distance: network.distance ? (typeof network.distance === 'number' ? network.distance : String(network.distance)) : undefined,
   };
 }
 
@@ -225,18 +218,13 @@ function normalizeNetworkSnapshot(
   payload: NetworkSnapshotPayload,
 ): NetworkSnapshotEvent {
   if (Array.isArray(payload)) {
-    return {
-      event: eventName,
-      data: payload.map(normalizeNetworkItem),
-    };
+    return { event: eventName, data: payload.map(normalizeNetworkItem) };
   }
-
   return {
     event: payload.event ?? eventName,
     data: Array.isArray(payload.data) ? payload.data.map(normalizeNetworkItem) : [],
   };
 }
-
 
 export function useSocket(options: UseSocketOptions = {}) {
   const {
@@ -278,22 +266,10 @@ export function useSocket(options: UseSocketOptions = {}) {
       onAttackAck,
       onThreatEvent,
     };
-  }, [
-    onAttackAck,
-    onAttackCommand,
-    onAttackCommandAck,
-    onNetworkRemoved,
-    onNetworkSnapshot,
-    onSensorSnapshot,
-    onSensorStatusUpdate,
-    onThreatDetected,
-    onThreatEvent,
-  ]);
+  }, [onAttackAck, onAttackCommand, onAttackCommandAck, onNetworkRemoved, onNetworkSnapshot, onSensorSnapshot, onSensorStatusUpdate, onThreatDetected, onThreatEvent]);
 
   const connect = useCallback(() => {
-    if (socketRef.current) {
-      return;
-    }
+    if (socketRef.current) return;
 
     const socketUrl = resolveSocketUrl();
     const socket = io(socketUrl, {
@@ -312,75 +288,52 @@ export function useSocket(options: UseSocketOptions = {}) {
 
     socket.on('disconnect', (reason) => {
       setConnected(false);
-      console.log('[SOCKET CONNECTED] disconnected', { reason });
+      console.log('[SOCKET DISCONNECTED]', { reason });
     });
 
     socket.on('connect_error', (error) => {
       setConnected(false);
-      console.error('[SOCKET CONNECTED] connect_error', error);
-    });
-
-    socket.on('connection_response', (data) => {
-      console.log('[EVENT RECEIVED] connection_response', data);
+      console.error('[SOCKET ERROR]', error);
     });
 
     socket.on('network_snapshot', (payload: NetworkSnapshotPayload) => {
-      const event = normalizeNetworkSnapshot('network_snapshot', payload);
-      handlersRef.current.onNetworkSnapshot?.(event);
+      handlersRef.current.onNetworkSnapshot?.(normalizeNetworkSnapshot('network_snapshot', payload));
     });
 
     socket.on('networks_snapshot', (payload: NetworkSnapshotPayload) => {
-      const event = normalizeNetworkSnapshot('networks_snapshot', payload);
-      handlersRef.current.onNetworkSnapshot?.(event);
+      handlersRef.current.onNetworkSnapshot?.(normalizeNetworkSnapshot('networks_snapshot', payload));
     });
 
     socket.on('sensor_snapshot', (event: SensorSnapshotEvent) => {
-      console.log('SNAPSHOT', event.data);
       handlersRef.current.onSensorSnapshot?.(event);
     });
 
     socket.on('sensor_status_update', (event: SensorStatusUpdateEvent) => {
-      console.log('[EVENT RECEIVED] sensor_status_update', event);
       handlersRef.current.onSensorStatusUpdate?.(event);
     });
 
     socket.on('network_removed', (event: NetworkRemovedEvent) => {
-      console.log('[EVENT RECEIVED] network_removed', event);
       handlersRef.current.onNetworkRemoved?.(event);
     });
 
-    socket.on('network_snapshot', (event: LiveNetworkEvent[]) => {
-      console.log('SNAPSHOT', event);
-      handlersRef.current.onNetworkSnapshot?.(event);
-    });
-
-    socket.on('network_removed', (event: NetworkRemovedEvent) => {
-      console.log('[EVENT RECEIVED] network_removed', event);
-      handlersRef.current.onNetworkRemoved?.(event);
-    });
-
-    socket.on('threat_detected', (event: LiveNetworkEvent) => {
-      console.log('[EVENT RECEIVED] threat_detected', event);
-      handlersRef.current.onThreatDetected?.(event);
+    socket.on('threat_detected', (event: any) => {
+      // استخدام دالة التنظيم لضمان وصول السكور والأسباب
+      handlersRef.current.onThreatDetected?.(normalizeNetworkItem(event));
     });
 
     socket.on('attack_command', (event: AttackCommandEvent) => {
-      console.log('[EVENT RECEIVED] attack_command', event);
       handlersRef.current.onAttackCommand?.(event);
     });
 
     socket.on('attack_command_ack', (event: AttackCommandAckEvent) => {
-      console.log('[EVENT RECEIVED] attack_command_ack', event);
       handlersRef.current.onAttackCommandAck?.(event);
     });
 
     socket.on('attack_ack', (event: AttackAckEvent) => {
-      console.log('[EVENT RECEIVED] attack_ack', event);
       handlersRef.current.onAttackAck?.(event);
     });
 
     socket.on('threat_event', (event: ThreatEvent) => {
-      console.log('[EVENT RECEIVED] threat_event', event);
       handlersRef.current.onThreatEvent?.(event);
     });
 
@@ -388,61 +341,33 @@ export function useSocket(options: UseSocketOptions = {}) {
   }, []);
 
   const disconnect = useCallback(() => {
-    if (!socketRef.current) {
-      return;
-    }
-
-    for (const eventName of SOCKET_EVENTS) {
-      socketRef.current.off(eventName);
-    }
+    if (!socketRef.current) return;
+    for (const eventName of SOCKET_EVENTS) socketRef.current.off(eventName);
     socketRef.current.disconnect();
     socketRef.current = null;
     setConnected(false);
   }, []);
 
   const isConnected = useCallback(() => connected, [connected]);
-
   const getSocket = useCallback(() => socketRef.current, []);
 
   const sendAttackCommand = useCallback((payload: AttackCommandEvent) => {
-    if (!socketRef.current?.connected) {
-      throw new Error('Socket is not connected');
-    }
-
-    console.log('[SOCKET EMIT] attack_command', payload);
+    if (!socketRef.current?.connected) throw new Error('Socket is not connected');
     socketRef.current.emit('attack_command', payload);
   }, []);
 
   useEffect(() => {
-    if (!autoConnect) {
-      return;
-    }
-
-    connect();
-    return () => {
-      disconnect();
-    };
+    if (autoConnect) connect();
+    return () => disconnect();
   }, [autoConnect, connect, disconnect]);
 
-  return {
-    connect,
-    disconnect,
-    isConnected,
-    getSocket,
-    sendAttackCommand,
-  };
+  return { connect, disconnect, isConnected, getSocket, sendAttackCommand };
 }
-
 
 export function useThreatEvents(onEvent?: (event: ThreatEvent) => void) {
-  useSocket({
-    onThreatEvent: onEvent,
-  });
+  useSocket({ onThreatEvent: onEvent });
 }
 
-
 export function useSensorStatus(onEvent?: (event: SensorStatusUpdateEvent) => void) {
-  useSocket({
-    onSensorStatusUpdate: onEvent,
-  });
+  useSocket({ onSensorStatusUpdate: onEvent });
 }

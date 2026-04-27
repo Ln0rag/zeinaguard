@@ -354,8 +354,15 @@ class WSClient:
 
         try:
             with self._sender_lock:
+                # الاختبار القاتل: هنطبع لو السكور موجود ولا لأ
+                if event_name == "new_threat" or event_name == "network_scan":
+                    has_score = "YES" if "score" in payload else "NO"
+                    score_val = payload.get("score", "N/A")
+                    print(f"DEBUG: Event={event_name} | Has Score={has_score} | Value={score_val}")
+                
                 if event_name not in {"network_scan", "sensor_heartbeat"}:
                     LOGGER.info("[SEND] event=%s payload=%s", event_name, self._payload_preview(payload))
+                
                 self.sio.emit(event_name, payload)
             return True
         except Exception as exc:
@@ -414,6 +421,8 @@ class WSClient:
                 "signal": event.get("signal"),
                 "channel": event.get("channel"),
                 "classification": event.get("classification"),
+                "score": threat.get("score", 0),      # السطر ده كان ناقص
+                "reasons": threat.get("reasons", []), # السطر ده كان ناقص
                 "timestamp": event.get("timestamp") or utc_iso(),
                 "manufacturer": event.get("manufacturer"),
                 "threat_type": threat.get("status"),
@@ -497,11 +506,9 @@ class WSClient:
                 "batch_size": len(batch),
             }
         )
-
     def _build_scan_payload(self, scan):
         sensor_id = self._sensor_id_value()
         if sensor_id is None:
-            LOGGER.warning("[DROP] event=network_scan invalid sensor_id payload=%s", {"bssid": scan.get("bssid")})
             return None
 
         clients = self._build_clients_payload(scan.get("bssid"))
@@ -515,11 +522,12 @@ class WSClient:
             "signal": scan.get("signal"),
             "classification": scan.get("classification", "LEGIT"),
             "manufacturer": scan.get("manufacturer"),
-            "score": scan.get("score", 0),
+            "score": scan.get("score", 0), # هيبعت السكور الجديد (0-100)
+            "reasons": scan.get("reasons", []), # هيبعت أسباب التقييم
+            "is_trusted": scan.get("is_trusted", False), # حالة الثقة
             "auth": scan.get("auth"),
             "wps": scan.get("wps"),
             "distance": scan.get("distance"),
-            "raw_beacon": scan.get("raw_beacon"),
             "clients": clients,
             "clients_count": len(clients),
         }
