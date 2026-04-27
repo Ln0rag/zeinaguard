@@ -19,7 +19,6 @@ export function Sidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/threats', label: 'Threats', icon: AlertTriangle },
     { href: '/sensors', label: 'Sensors', icon: Wifi },
-    { href: '/topology', label: 'Network Map', icon: Network },
     { href: '/incidents', label: 'Incidents', icon: BarChart3 },
   ];
 

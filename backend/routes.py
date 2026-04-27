@@ -4,7 +4,7 @@ from routes_threats import threats_bp
 from routes_sensors import sensors_bp
 from routes_dashboard import active_networks_bp, dashboard_bp
 from routes_incidents import incidents_bp
-from routes_topology import topology_bp
+
 
 def register_blueprints(app):
 
@@ -25,7 +25,5 @@ def register_blueprints(app):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(active_networks_bp)
     
-    # 6. Network Topology Visualization
-    app.register_blueprint(topology_bp)
 
     print("[API] All active blueprints registered successfully (Alerts & Settings removed)")

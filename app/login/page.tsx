@@ -1,8 +1,8 @@
 import { LoginForm } from '@/components/auth/login-form';
 
 export const metadata = {
-  title: 'Login - ZeinaGuard Pro',
-  description: 'Login to ZeinaGuard Pro Wireless Intrusion Prevention System',
+  title: 'ZeinaGuard',
+  description: 'Wireless Intrusion Detection & Prevention System',
 };
 
 export default function LoginPage() {
@@ -17,7 +17,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-slate-400">
           <p>
-            ZeinaGuard Pro - Enterprise Wireless Intrusion Prevention System
+            ZeinaGuard - Wireless Intrusion Detection & Prevention System
           </p>
           <p className="mt-2 text-xs text-slate-500">
             Phase 1: JWT Authentication
