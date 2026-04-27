@@ -86,7 +86,6 @@ SCHEMA_STATEMENTS = [
     """
     CREATE TABLE IF NOT EXISTS notification_configs (
         id SERIAL PRIMARY KEY,
-        alert_email VARCHAR(255),
         sounds_enabled BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -159,7 +158,6 @@ SQLITE_MIGRATIONS = [
     ("notification_configs", None, """
     CREATE TABLE IF NOT EXISTS notification_configs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        alert_email VARCHAR(255),
         sounds_enabled BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

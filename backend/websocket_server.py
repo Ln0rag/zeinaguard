@@ -22,7 +22,7 @@ from redis import Redis
 from sqlalchemy import func, literal_column, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from models import NetworkScanEvent, NotificationConfig, Sensor, SensorHealth, Threat, WiFiNetwork, db
+from models import NetworkScanEvent, Sensor, SensorHealth, Threat, WiFiNetwork, db
 from realtime_state import (
     get_connected_sensors_snapshot as get_realtime_sensor_snapshot_map,
     get_network as get_realtime_network,
@@ -2047,46 +2047,15 @@ def init_socketio(app):
 
     return socketio
 
-
 def broadcast_threat_event(threat_data):
     """
-    Broadcast threat event to all connected dashboards and trigger external notifications
+    Broadcast threat event to all connected dashboards
     """
     socketio = current_app.socketio
     
-    # 1. Broadcast via WebSocket (Real-time dashboard updates)
+    # Broadcast via WebSocket (Real-time dashboard updates)
     _emit_socket_event(socketio, THREAT_DETECTED_EVENT, threat_data, room=DASHBOARD_ROOM)
     _emit_socket_event(socketio, "threat_event", threat_data, room=DASHBOARD_ROOM)
-    
-    # 2. Trigger External Notifications (Email)
-    try:
-        # We need an app context to query the database
-        with current_app.app_context():
-            config = NotificationConfig.query.first()
-            if not config:
-                return
-
-            severity = str(threat_data.get('severity', 'high')).upper()
-            threat_type = threat_data.get('threat_type', 'Unknown Threat')
-            ssid = threat_data.get('ssid', 'N/A')
-            source_mac = threat_data.get('source_mac', threat_data.get('bssid', 'N/A'))
-            
-            notification_payload = {
-                "title": f"🚨 {severity} Threat Detected: {threat_type}",
-                "message": f"A {severity.lower()} severity {threat_type} was detected.\n\n"
-                           f"*SSID:* {ssid}\n"
-                           f"*Source MAC:* {source_mac}\n"
-                           f"*Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                "type": "warning" if severity in ['HIGH', 'CRITICAL'] else "info",
-                "severity": severity,
-                "threat_type": threat_type,
-                "ssid": ssid,
-                "source_mac": source_mac
-            }
-
-    except Exception as e:
-        LOGGER.error(f"[WebSocket] Error triggering notifications: {str(e)}")
-
 
 def broadcast_sensor_status(sensor_data):
     socketio = current_app.socketio

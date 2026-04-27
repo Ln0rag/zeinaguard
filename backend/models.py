@@ -23,7 +23,6 @@ class User(db.Model):
 
     id = db.Column(Integer, primary_key=True)
     username = db.Column(String(255), unique=True, nullable=False)
-    email = db.Column(String(255), unique=True, nullable=False)
     password_hash = db.Column(String(255), nullable=False)
     first_name = db.Column(String(255))
     last_name = db.Column(String(255))
@@ -415,7 +414,6 @@ class NotificationConfig(db.Model):
     __tablename__ = 'notification_configs'
 
     id = db.Column(Integer, primary_key=True)
-    alert_email = db.Column(String(255))
     sounds_enabled = db.Column(Boolean, default=True)
     created_at = db.Column(DateTime, default=datetime.utcnow)
     updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

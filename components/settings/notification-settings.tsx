@@ -13,7 +13,6 @@ import { soundService } from '@/lib/sound-service';
 export function NotificationSettings() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   const [soundsEnabled, setSoundsEnabled] = useState(!soundService.getMuteState());
-  const [alertEmail, setAlertEmail] = useState('');
   const [loading, setLoading] = useState<string | null>(null);
 
   // Load settings from backend on mount
@@ -23,7 +22,6 @@ export function NotificationSettings() {
         const response = await fetch(`${apiUrl}/api/notifications/settings`);
         if (response.ok) {
           const data = await response.json();
-          setAlertEmail(data.alert_email || '');
           setSoundsEnabled(data.sounds_enabled ?? true);
           soundService.setMute(!(data.sounds_enabled ?? true));
         }
@@ -54,49 +52,6 @@ export function NotificationSettings() {
       }
     } catch (error) {
       toast.error('Failed to update sound settings');
-    }
-  };
-
-  const handleSaveEmail = async () => {
-    if (!alertEmail.trim() || !alertEmail.includes('@')) {
-      toast.error('Valid email required', {
-        description: 'Please enter a valid email address',
-      });
-      return;
-    }
-
-    try {
-      setLoading('email');
-      
-      // Update backend settings
-      const updateResponse = await fetch(`${apiUrl}/api/notifications/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ alert_email: alertEmail }),
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error('Failed to save email to server');
-      }
-      
-      // Test the email
-      const testResponse = await fetch(`${apiUrl}/api/notifications/email-test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: alertEmail }),
-      });
-
-      if (testResponse.ok) {
-        toast.success('Email configured', {
-          description: `Alert email saved: ${alertEmail}`,
-        });
-      }
-    } catch (error) {
-      toast.error('Failed to save email', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
-    } finally {
-      setLoading(null);
     }
   };
 
@@ -172,61 +127,6 @@ export function NotificationSettings() {
                 Test Siren
               </button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Email Integration */}
-      <Card className="border-slate-700 bg-slate-800/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Mail className="w-5 h-5 text-orange-400" />
-            Email Alerts
-          </CardTitle>
-          <CardDescription>Receive critical alerts via email</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="alert-email" className="text-white">
-                Alert Email Address
-              </Label>
-              <p className="text-xs text-slate-400 mt-1 mb-2">
-                Critical alerts will be sent to this address
-              </p>
-              <Input
-                id="alert-email"
-                type="email"
-                placeholder="admin@company.com"
-                value={alertEmail}
-                onChange={(e) => setAlertEmail(e.target.value)}
-                className="bg-slate-900 border-slate-600 text-white placeholder-slate-500"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSaveEmail}
-                disabled={loading === 'email'}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {loading === 'email' ? 'Saving...' : 'Save Email'}
-              </Button>
-              {alertEmail && (
-                <Button
-                  onClick={() => handleTestSound('ping')}
-                  variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                >
-                  Send Test Email
-                </Button>
-              )}
-            </div>
-            {alertEmail && (
-              <div className="flex items-center gap-2 text-sm text-green-400">
-                <CheckCircle className="w-4 h-4" />
-                Email address saved (critical alerts will be sent)
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

@@ -41,14 +41,13 @@ class AuthService:
         return user
 
     @staticmethod
-    def create_tokens(user_id, username, email, is_admin):
+    def create_tokens(user_id, username, is_admin):  # شيلنا الـ email من هنا
         """
         Generates JWT tokens for the authenticated user
         """
         # Put important data inside the Identity
         additional_claims = {
             "username": username,
-            "email": email,
             "is_admin": is_admin
         }
         
@@ -66,7 +65,6 @@ class AuthService:
                 'is_admin': is_admin
             }
         }
-
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
@@ -81,11 +79,10 @@ def login():
         if not user:
             return jsonify({'error': 'Invalid credentials'}), 401
             
-        # Use AuthService to create tokens
+        # نادينـا على الدالة من غير الـ email
         auth_data = AuthService.create_tokens(
             user_id=user.id,
             username=user.username,
-            email=user.email,
             is_admin=user.is_admin
         )
         
