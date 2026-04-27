@@ -105,12 +105,12 @@ function signalBarWidth(signal: number | null) {
 
 function classificationClasses(classification: LiveNetworkEvent['classification']) {
   if (classification === 'ROGUE') {
-    return 'bg-red-950 text-red-100 border border-red-700';
+    return 'bg-red-950/40 text-red-400 border border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]';
   }
   if (classification === 'SUSPICIOUS') {
-    return 'bg-amber-950 text-amber-100 border border-amber-700';
+    return 'bg-amber-950/40 text-amber-400 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]';
   }
-  return 'bg-emerald-950 text-emerald-100 border border-emerald-700';
+  return 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]';
 }
 
 function TelemetryStatusBadge({ status, icon, label }: { status: string; icon: React.ReactNode; label: string }) {
@@ -497,35 +497,39 @@ export function LiveNetworkConsole() {
   };
 
   return (
-    <div className="space-y-6 mt-2">
+<div className="space-y-6 mt-2">
       
-      
+      {/* كارت حالة الهجوم - نيون خطر هادي */}
       {attackState && (
-        <Card className="border-slate-700 bg-slate-900">
-          <CardContent className="pt-6 text-sm text-slate-200">{attackState}</CardContent>
+        <Card className="border-emerald-500/20 bg-emerald-950/10 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+          <CardContent className="pt-6 text-sm text-emerald-400 font-medium animate-pulse">
+            <span className="mr-2">⚡</span> {attackState}
+          </CardContent>
         </Card>
       )}
 
+      {/* الكارد الأساسي للداشبورد */}
       <Card className="bg-slate-900 overflow-hidden border-none shadow-none py-0">
           <CardHeader className="p-0 border-none bg-transparent">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
-              {/* Left Section: Title & Search */}
+              
+              {/* القسم الشمال: العنوان والبحث النيون */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1 w-full">
                 <CardTitle className="text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.7)] text-xl font-bold tracking-tight whitespace-nowrap">
-                ZeinaGuard
+                  ZeinaGuard
                 </CardTitle>
 
                 <div className="relative w-full flex-1">
                   <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                     {isSearching ? (
-                      <Loader2 className="h-4 w-4 text-cyan-500 animate-spin" />
+                      <Loader2 className="h-4 w-4 text-emerald-500 animate-spin" />
                     ) : (
-                      <Search className="h-4 w-4 text-slate-500" />
+                      <Search className="h-4 w-4 text-emerald-500/70" />
                     )}
                   </div>
                   <Input
                     type="text"
-                    placeholder="Search SSID or MAC address..."
+                    placeholder="Search SSID or MAC address"
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
@@ -537,100 +541,81 @@ export function LiveNetworkConsole() {
                     onBlur={() => {
                       setTimeout(() => setShowSuggestions(false), 200);
                     }}
-                    className="h-10 pl-10 pr-10 w-full bg-slate-950/40 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus-visible:ring-cyan-600/30 focus-visible:border-cyan-600/50 transition-all"
+                    className="h-10 pl-10 pr-10 w-full bg-emerald-950/20 border-emerald-500/30 text-emerald-50 placeholder:text-emerald-500/40 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60 shadow-[0_0_10px_rgba(16,185,129,0.1)] focus:shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all duration-300 outline-none"
                     aria-label="Search networks"
-                    aria-describedby="search-description"
-                    aria-autocomplete="list"
-                    aria-controls="search-suggestions"
-                    aria-expanded={showSuggestions && suggestions.length > 0}
                   />
                   
-                  {/* Suggestions Dropdown */}
+                  {/* الاقتراحات - نيون غامق */}
                   {showSuggestions && suggestions.length > 0 && (
                     <div 
                       id="search-suggestions"
-                      className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+                      className="absolute z-50 w-full mt-2 bg-slate-900 border border-emerald-500/20 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
                       role="listbox"
                     >
                       {suggestions.map((suggestion, index) => (
                         <button
                           key={suggestion.bssid}
-                          className={`w-full px-4 py-3 text-left text-sm flex flex-col gap-1 transition-colors border-b border-slate-800 last:border-0 ${
-                            index === focusedSuggestionIndex ? 'bg-cyan-600/20 text-white' : 'text-slate-300 hover:bg-slate-800/80'
+                          className={`w-full px-4 py-3 text-left text-sm flex flex-col gap-1 transition-colors border-b border-emerald-500/10 last:border-0 ${
+                            index === focusedSuggestionIndex ? 'bg-emerald-500/20 text-white' : 'text-emerald-300/70 hover:bg-emerald-950/40'
                           }`}
                           onClick={() => {
                             setSearchQuery(suggestion.ssid || suggestion.bssid);
                             setShowSuggestions(false);
                           }}
-                          role="option"
-                          aria-selected={index === focusedSuggestionIndex}
                         >
-                          <span className="font-bold text-white">
-                            {suggestion.ssid || 'Hidden'}
-                          </span>
-                          <span className="text-xs text-cyan-400/70 font-mono">
-                            {suggestion.bssid}
-                          </span>
+                          <span className="font-bold text-emerald-50">{suggestion.ssid || 'Hidden'}</span>
+                          <span className="text-xs text-emerald-500/50 font-mono">{suggestion.bssid}</span>
                         </button>
                       ))}
                     </div>
                   )}
-
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
-                      aria-label="Clear search"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                  <span id="search-description" className="sr-only">
-                    Search for WiFi networks by SSID or BSSID MAC address. Results update in real-time.
-                  </span>
                 </div>
               </div>
               
-              {/* Right Section: Telemetry */}
+              {/* القسم اليمين: التليميتري النيون الموحد */}
               <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
                 <TelemetryStatusBadge 
                   status={telemetry.sensorStatus}
-                  icon={<Shield className="w-3.5 h-3.5" />}
+                  icon={<Shield className="w-3.5 h-3.5 drop-shadow-[0_0_3px_rgba(52,211,153,0.5)]" />}
                   label={`Sensor ${telemetry.sensorStatus}`}
                 />
                 <TelemetryStatusBadge 
                   status={telemetry.backendStatus}
-                  icon={<Server className="w-3.5 h-3.5" />}
+                  icon={<Server className="w-3.5 h-3.5 drop-shadow-[0_0_3px_rgba(52,211,153,0.5)]" />}
                   label={`Backend ${telemetry.backendStatus}`}
                 />
-                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-slate-700/50 bg-slate-950/30 text-slate-300 text-xs font-medium">
-                  <Wifi className="w-3.5 h-3.5 text-cyan-500" />
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-emerald-500/20 bg-emerald-950/20 text-emerald-400/90 text-xs font-medium shadow-[0_0_8px_rgba(16,185,129,0.05)]">
+                  <Wifi className="w-3.5 h-3.5 text-emerald-500 drop-shadow-[0_0_3px_rgba(16,185,129,0.5)]" />
                   <span>{telemetry.discoveredNetworks} Networks</span>
                 </div>
-                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-slate-700/50 bg-slate-950/30 text-slate-400 text-xs font-medium">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{new Date().toLocaleTimeString('en-US', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' })} Cairo</span>
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-emerald-500/20 bg-emerald-950/20 text-emerald-400/90 text-xs font-medium shadow-[0_0_8px_rgba(16,185,129,0.05)]">
+                  <Clock className="w-3.5 h-3.5 text-emerald-500 drop-shadow-[0_0_3px_rgba(16,185,129,0.5)]" />
+                  <span>
+                    {mounted ? new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'} Cairo
+                  </span>
                 </div>
               </div>
             </div>
           </CardHeader>
+
           <CardContent className="px-0">
             {loading ? (
-              <div className="flex h-64 items-center justify-center text-slate-400">
+              <div className="flex h-64 items-center justify-center text-emerald-500/50">
                 <Activity className="mr-2 h-5 w-5 animate-spin" />
-                Waiting for realtime snapshots...
+                Initializing Neon Grid...
               </div>
             ) : (
-              <div className="overflow-x-auto border border-slate-600/30 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm">
+              /* الجدول النيون المطور */
+              <div className="overflow-x-auto border border-emerald-500/10 bg-slate-900/80 backdrop-blur-md rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.4)]">
                 <div className="w-full">
-                  {/* Mobile Card View */}
+                  
+                  {/* موبايل فيو - نيون ستايل */}
                   <div className="block lg:hidden">
                     {networkList.map((network) => (
-                      <div key={network.bssid} className="border-b border-slate-700/50 p-4 last:border-b-0">
+                      <div key={network.bssid} className="border-b border-emerald-500/10 p-4 last:border-b-0">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <div className="font-semibold text-white text-sm">
+                            <div className="font-semibold text-emerald-50 text-sm drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">
                               {network.ssid || 'Hidden'}
                             </div>
                             <span className={`rounded-full px-2 py-1 text-xs font-semibold ${classificationClasses(network.classification)}`}>
@@ -640,146 +625,100 @@ export function LiveNetworkConsole() {
                           <Button
                             type="button"
                             size="sm"
-                            className="bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25 transition-all duration-200"
+                            className="bg-transparent border border-red-500/40 text-red-500 hover:bg-red-500/20 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300 font-bold"
                             onClick={() => handleAttack(network)}
                           >
                             Attack
                           </Button>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="bg-slate-800/50 rounded px-2 py-1">
-                            <span className="text-slate-400">BSSID:</span>
-                            <span className="ml-1 font-mono text-cyan-300">{network.bssid}</span>
+                          <div className="bg-emerald-950/30 border border-emerald-500/10 rounded px-2 py-1">
+                            <span className="text-emerald-500/50">BSSID:</span>
+                            <span className="ml-1 font-mono text-emerald-400">{network.bssid}</span>
                           </div>
-                          <div className="bg-slate-800/50 rounded px-2 py-1">
-                            <span className="text-slate-400">Signal:</span>
-                            <span className="ml-1 text-white">{network.signal ?? 'N/A'} dBm</span>
-                          </div>
-                          <div className="bg-slate-800/50 rounded px-2 py-1 col-span-2">
-                            <span className="text-slate-400">Last Seen:</span>
-                            <span className="ml-1 text-white">{relativeLastSeen(network.last_seen)}</span>
+                          <div className="bg-emerald-950/30 border border-emerald-500/10 rounded px-2 py-1">
+                            <span className="text-emerald-500/50">Signal:</span>
+                            <span className="ml-1 text-emerald-100">{network.signal ?? 'N/A'} dBm</span>
                           </div>
                         </div>
                       </div>
                     ))}
-                    {networkList.length === 0 && (
-                      <div className="p-12 text-center text-slate-400 flex flex-col items-center gap-2">
-                        <Search className="h-8 w-8 text-slate-600 mb-2" />
-                        <p className="text-lg font-medium text-slate-300">
-                          {debouncedSearchQuery ? 'No matching networks found' : 'No active networks in snapshot'}
-                        </p>
-                        <p className="text-sm">
-                          {debouncedSearchQuery 
-                            ? `We couldn't find any network matching "${debouncedSearchQuery}"`
-                            : 'Wait for the next realtime update from the sensors'}
-                        </p>
-                        {debouncedSearchQuery && (
-                          <Button 
-                            variant="link" 
-                            className="text-cyan-400 hover:text-cyan-300 mt-2"
-                            onClick={() => setSearchQuery('')}
-                          >
-                            Clear search query
-                          </Button>
-                        )}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Desktop Table View */}
+                  {/* ديسكتوب فيو - نيون ستايل */}
                   <table className="hidden lg:table w-full">
                     <thead>
-                      <tr className="border-b border-slate-600/30 bg-gradient-to-r from-slate-800/50 to-slate-700/50">
-                        <th className="px-3 py-2 text-left min-w-[120px] max-w-[300px]">
-                          <button
-                            onClick={() => handleSort('ssid')}
-                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
-                          >
-                            SSID
-                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'ssid' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                      <tr className="border-b border-emerald-500/20 bg-emerald-950/10 backdrop-blur-sm">
+                        <th className="px-3 py-3 text-left">
+                          <button onClick={() => handleSort('ssid')} className="flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
+                            SSID <ArrowUpDown className="h-3 w-3" />
                           </button>
                         </th>
-                        <th className="px-3 py-2 text-left min-w-[140px] max-w-[350px]">
-                          <button
-                            onClick={() => handleSort('bssid')}
-                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
-                          >
-                            BSSID
-                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'bssid' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                        <th className="px-3 py-3 text-left">
+                          <button onClick={() => handleSort('bssid')} className="flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
+                            BSSID <ArrowUpDown className="h-3 w-3" />
                           </button>
                         </th>
-                        <th className="px-3 py-2 text-left min-w-[80px] max-w-[120px]">
-                          <button
-                            onClick={() => handleSort('signal')}
-                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
-                          >
-                            Signal
-                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'signal' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                        <th className="px-3 py-3 text-left">
+                          <button onClick={() => handleSort('signal')} className="flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
+                            Signal <ArrowUpDown className="h-3 w-3" />
                           </button>
                         </th>
-                        <th className="px-3 py-2 text-left min-w-[80px] max-w-[120px]">
-                          <button
-                            onClick={() => handleSort('classification')}
-                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
-                          >
-                            Class
-                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'classification' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                        <th className="px-3 py-3 text-left">
+                          <button onClick={() => handleSort('classification')} className="flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
+                            Class <ArrowUpDown className="h-3 w-3" />
                           </button>
                         </th>
-                        <th className="px-3 py-2 text-left min-w-[100px] max-w-[150px]">
-                          <button
-                            onClick={() => handleSort('last_seen')}
-                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
-                          >
-                            Last Seen
-                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'last_seen' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                        <th className="px-3 py-3 text-left">
+                          <button onClick={() => handleSort('last_seen')} className="flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
+                            Last Seen <ArrowUpDown className="h-3 w-3" />
                           </button>
                         </th>
-                        <th className="px-3 py-2 text-left min-w-[80px] max-w-[100px]">Action</th>
+                        <th className="px-3 py-3 text-left text-emerald-400 font-semibold">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {networkList.map((network, index) => (
                         <tr 
                           key={network.bssid} 
-                          className={`border-b border-slate-600/20 hover:bg-gradient-to-r hover:from-slate-800/30 hover:to-slate-700/30 transition-all duration-200 ${
-                            index % 2 === 0 ? 'bg-slate-900/20' : 'bg-slate-800/10'
+                          className={`border-b border-emerald-500/5 hover:bg-emerald-500/5 transition-all duration-200 ${
+                            index % 2 === 0 ? 'bg-slate-900/40' : 'bg-slate-800/20'
                           }`}
                         >
-                          <td className="px-3 py-2">
-                            <div className="font-semibold text-white text-base truncate">
+                          <td className="px-3 py-4">
+                            <div className="font-semibold text-emerald-50 text-base truncate drop-shadow-[0_0_5px_rgba(16,185,129,0.2)]">
                               {network.ssid || 'Hidden'}
                             </div>
                           </td>
-                          <td className="px-3 py-2">
-                            <div className="font-mono text-sm text-cyan-300 bg-slate-800/50 rounded px-2 py-1 inline-block truncate">
+                          <td className="px-3 py-4">
+                            <div className="font-mono text-sm text-emerald-400/80 bg-emerald-950/30 border border-emerald-500/20 rounded px-2 py-1 inline-block truncate">
                               {network.bssid}
                             </div>
                           </td>
-                          <td className="px-3 py-2">
-                            <div className={`text-base font-medium whitespace-nowrap ${
+                          <td className="px-3 py-4">
+                            <div className={`text-base font-medium ${
                               network.signal && network.signal > -60 ? 'text-emerald-400' :
                               network.signal && network.signal > -75 ? 'text-amber-400' :
-                              network.signal ? 'text-red-400' : 'text-slate-400'
+                              network.signal ? 'text-red-400' : 'text-emerald-500/50'
                             }`}>
                               {network.signal ?? 'N/A'} dBm
                             </div>
                           </td>
-                          <td className="px-3 py-2">
-                            <span className={`rounded-full px-3 py-1 text-sm font-semibold shadow-sm whitespace-nowrap ${classificationClasses(network.classification)}`}>
+                          <td className="px-3 py-4">
+                            <span className={`rounded-full px-3 py-1 text-sm font-semibold shadow-sm ${classificationClasses(network.classification)}`}>
                               {network.classification}
                             </span>
                           </td>
-                          <td className="px-3 py-2">
-                            <div className="text-base text-slate-300 whitespace-nowrap">
+                          <td className="px-3 py-4">
+                            <div className="text-base text-emerald-100/60">
                               {relativeLastSeen(network.last_seen)}
                             </div>
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-3 py-4">
                             <Button
                               type="button"
                               size="sm"
-                              className="bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25 transition-all duration-200 transform hover:scale-105 whitespace-nowrap"
+                              className="bg-transparent border border-red-500/40 text-red-500 hover:bg-red-500/20 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300 shadow-sm font-bold transform hover:scale-105 whitespace-nowrap"
                               onClick={() => handleAttack(network)}
                             >
                               Attack
@@ -787,32 +726,6 @@ export function LiveNetworkConsole() {
                           </td>
                         </tr>
                       ))}
-                      {networkList.length === 0 && (
-                        <tr>
-                          <td className="px-4 py-20 text-center text-slate-400" colSpan={6}>
-                            <div className="flex flex-col items-center gap-2">
-                              <Search className="h-10 w-10 text-slate-600 mb-2" />
-                              <p className="text-xl font-medium text-slate-300">
-                                {debouncedSearchQuery ? 'No matching networks found' : 'No active networks in snapshot'}
-                              </p>
-                              <p className="text-base">
-                                {debouncedSearchQuery 
-                                  ? `We couldn't find any network matching "${debouncedSearchQuery}"`
-                                  : 'Wait for the next realtime update from the sensors'}
-                              </p>
-                              {debouncedSearchQuery && (
-                                <Button 
-                                  variant="link" 
-                                  className="text-cyan-400 hover:text-cyan-300 mt-4"
-                                  onClick={() => setSearchQuery('')}
-                                >
-                                  Clear search query
-                                </Button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>
