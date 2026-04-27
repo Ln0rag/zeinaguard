@@ -409,6 +409,21 @@ class AuditLog(db.Model):
         return f'<AuditLog {self.action}>'
 
 
+# ==================== Settings & Configuration ====================
+
+class NotificationConfig(db.Model):
+    __tablename__ = 'notification_configs'
+
+    id = db.Column(Integer, primary_key=True)
+    alert_email = db.Column(String(255))
+    sounds_enabled = db.Column(Boolean, default=True)
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+    updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<NotificationConfig {self.id}>'
+
+
 # ==================== Network & Blocking ====================
 
 class NetworkTopology(db.Model):

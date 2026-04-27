@@ -1,10 +1,10 @@
 """
-Notification Routes for ZeinaGuard Pro
-Handles webhook and email configuration endpoints
+Notification Routes for ZeinaGuard
+Handles email configuration endpoints
 """
 
 from flask import Blueprint, request, jsonify
-from notifications_mock import notification_service
+from models import db, NotificationConfig
 import logging
 
 # Create blueprint
@@ -12,34 +12,51 @@ notifications_bp = Blueprint('notifications', __name__, url_prefix='/api/notific
 logger = logging.getLogger(__name__)
 
 
-@notifications_bp.route('/webhook-test', methods=['POST'])
-def test_webhook():
-    """
-    Test webhook connection
-    Logs the webhook URL for testing purposes
-    """
+@notifications_bp.route('/settings', methods=['GET'])
+def get_settings():
+    """Get notification settings"""
+    try:
+        config = NotificationConfig.query.first()
+        if not config:
+            # Create default config if none exists
+            config = NotificationConfig(
+                alert_email='',
+                sounds_enabled=True
+            )
+            db.session.add(config)
+            db.session.commit()
+        
+        return jsonify({
+            'alert_email': config.alert_email,
+            'sounds_enabled': config.sounds_enabled
+        }), 200
+    except Exception as e:
+        logger.error(f'Error getting settings: {str(e)}')
+        return jsonify({'error': str(e)}), 500
+
+
+@notifications_bp.route('/settings', methods=['POST'])
+def update_settings():
+    """Update notification settings"""
     try:
         data = request.get_json()
-        url = data.get('url')
+        config = NotificationConfig.query.first()
         
-        if not url:
-            return jsonify({'error': 'Webhook URL required'}), 400
+        if not config:
+            config = NotificationConfig()
+            db.session.add(config)
         
-        result = notification_service.test_webhook(url)
-        
-        return jsonify({
-            'success': result['success'],
-            'message': result['message'],
-            'data': result.get('data', {})
-        }), 200
-        
+        if 'alert_email' in data:
+            config.alert_email = data['alert_email']
+        if 'sounds_enabled' in data:
+            config.sounds_enabled = data['sounds_enabled']
+            
+        db.session.commit()
+        return jsonify({'message': 'Settings updated successfully'}), 200
     except Exception as e:
-        logger.error(f'Webhook test error: {str(e)}')
-        return jsonify({
-            'error': str(e),
-            'message': 'Failed to test webhook'
-        }), 500
-
+        db.session.rollback()
+        logger.error(f'Error updating settings: {str(e)}')
+        return jsonify({'error': str(e)}), 500
 
 @notifications_bp.route('/email-test', methods=['POST'])
 def test_email():
@@ -54,48 +71,19 @@ def test_email():
         if not email:
             return jsonify({'error': 'Email address required'}), 400
         
-        result = notification_service.test_email(email)
         
+        status_code = 200 if result['success'] else 400
         return jsonify({
             'success': result['success'],
             'message': result['message'],
             'data': result.get('data', {})
-        }), 200
+        }), status_code
         
     except Exception as e:
         logger.error(f'Email test error: {str(e)}')
         return jsonify({
             'error': str(e),
             'message': 'Failed to test email'
-        }), 500
-
-
-@notifications_bp.route('/send-webhook', methods=['POST'])
-def send_webhook_notification():
-    """
-    Send a notification via webhook
-    """
-    try:
-        data = request.get_json()
-        url = data.get('url')
-        notification = data.get('notification')
-        
-        if not url or not notification:
-            return jsonify({'error': 'URL and notification data required'}), 400
-        
-        result = notification_service.send_webhook(url, notification)
-        
-        return jsonify({
-            'success': result['success'],
-            'message': result['message'],
-            'data': result.get('data', {})
-        }), 200
-        
-    except Exception as e:
-        logger.error(f'Webhook send error: {str(e)}')
-        return jsonify({
-            'error': str(e),
-            'message': 'Failed to send webhook notification'
         }), 500
 
 
@@ -114,11 +102,12 @@ def send_email_notification():
         
         result = notification_service.send_email(email, notification)
         
+        status_code = 200 if result['success'] else 400
         return jsonify({
             'success': result['success'],
             'message': result['message'],
             'data': result.get('data', {})
-        }), 200
+        }), status_code
         
     except Exception as e:
         logger.error(f'Email send error: {str(e)}')
@@ -127,7 +116,3 @@ def send_email_notification():
             'message': 'Failed to send email notification'
         }), 500
 
-
-def register_notification_blueprint(app):
-    """Register the notifications blueprint with the Flask app"""
-    app.register_blueprint(notifications_bp)

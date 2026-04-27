@@ -13,60 +13,47 @@ import { soundService } from '@/lib/sound-service';
 export function NotificationSettings() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   const [soundsEnabled, setSoundsEnabled] = useState(!soundService.getMuteState());
-  const [webhookUrl, setWebhookUrl] = useState('');
   const [alertEmail, setAlertEmail] = useState('');
   const [loading, setLoading] = useState<string | null>(null);
 
-  // Read from localStorage only on the client side
+  // Load settings from backend on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setWebhookUrl(localStorage.getItem('webhookUrl') || '');
-      setAlertEmail(localStorage.getItem('alertEmail') || '');
-    }
-  }, []);
-
-  const handleToggleSounds = () => {
-    const newState = !soundsEnabled;
-    setSoundsEnabled(newState);
-    soundService.setMute(!newState);
-    toast.success(newState ? 'Sound alerts enabled' : 'Sound alerts muted', {
-      description: newState ? 'You will hear alerts for critical events' : 'All sound alerts are muted',
-    });
-  };
-
-  const handleSaveWebhook = async () => {
-    if (!webhookUrl.trim()) {
-      toast.error('Webhook URL required', {
-        description: 'Please enter a valid webhook URL',
-      });
-      return;
-    }
-
-    try {
-      setLoading('webhook');
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('webhookUrl', webhookUrl);
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/api/notifications/settings`);
+        if (response.ok) {
+          const data = await response.json();
+          setAlertEmail(data.alert_email || '');
+          setSoundsEnabled(data.sounds_enabled ?? true);
+          soundService.setMute(!(data.sounds_enabled ?? true));
+        }
+      } catch (error) {
+        console.error('Failed to fetch notification settings:', error);
       }
-      
-      // Mock API call
-      const response = await fetch(`${apiUrl}/api/notifications/webhook-test`, {
+    };
+    fetchSettings();
+  }, [apiUrl]);
+
+  const handleToggleSounds = async () => {
+    const newState = !soundsEnabled;
+    try {
+      const response = await fetch(`${apiUrl}/api/notifications/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: webhookUrl }),
+        body: JSON.stringify({ sounds_enabled: newState }),
       });
-
+      
       if (response.ok) {
-        toast.success('Webhook configured', {
-          description: `Webhook URL saved: ${webhookUrl}`,
+        setSoundsEnabled(newState);
+        soundService.setMute(!newState);
+        toast.success(newState ? 'Sound alerts enabled' : 'Sound alerts muted', {
+          description: newState ? 'You will hear alerts for critical events' : 'All sound alerts are muted',
         });
+      } else {
+        throw new Error('Failed to update sound settings');
       }
     } catch (error) {
-      toast.error('Failed to save webhook', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
-    } finally {
-      setLoading(null);
+      toast.error('Failed to update sound settings');
     }
   };
 
@@ -80,19 +67,26 @@ export function NotificationSettings() {
 
     try {
       setLoading('email');
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('alertEmail', alertEmail);
+      
+      // Update backend settings
+      const updateResponse = await fetch(`${apiUrl}/api/notifications/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alert_email: alertEmail }),
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error('Failed to save email to server');
       }
       
-      // Mock API call
-      const response = await fetch(`${apiUrl}/api/notifications/email-test`, {
+      // Test the email
+      const testResponse = await fetch(`${apiUrl}/api/notifications/email-test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: alertEmail }),
       });
 
-      if (response.ok) {
+      if (testResponse.ok) {
         toast.success('Email configured', {
           description: `Alert email saved: ${alertEmail}`,
         });
@@ -178,61 +172,6 @@ export function NotificationSettings() {
                 Test Siren
               </button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Webhook Integration */}
-      <Card className="border-slate-700 bg-slate-800/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Send className="w-5 h-5 text-purple-400" />
-            Webhook Integration
-          </CardTitle>
-          <CardDescription>Send alerts to Slack, Discord, or custom webhooks</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="webhook-url" className="text-white">
-                Webhook URL
-              </Label>
-              <p className="text-xs text-slate-400 mt-1 mb-2">
-                Example: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-              </p>
-              <Input
-                id="webhook-url"
-                type="url"
-                placeholder="https://hooks.slack.com/services/..."
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                className="bg-slate-900 border-slate-600 text-white placeholder-slate-500"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSaveWebhook}
-                disabled={loading === 'webhook'}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {loading === 'webhook' ? 'Saving...' : 'Save Webhook'}
-              </Button>
-              {webhookUrl && (
-                <Button
-                  onClick={() => handleTestSound('ping')}
-                  variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                >
-                  Test Connection
-                </Button>
-              )}
-            </div>
-            {webhookUrl && (
-              <div className="flex items-center gap-2 text-sm text-green-400">
-                <CheckCircle className="w-4 h-4" />
-                Webhook URL saved (alerts will be sent here)
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

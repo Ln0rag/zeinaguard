@@ -83,6 +83,15 @@ SCHEMA_STATEMENTS = [
     "ALTER TABLE wifi_networks ALTER COLUMN is_active SET DEFAULT TRUE",
     "ALTER TABLE wifi_networks ALTER COLUMN is_active SET NOT NULL",
     "UPDATE wifi_networks SET seen_count = 1 WHERE seen_count IS NULL",
+    """
+    CREATE TABLE IF NOT EXISTS notification_configs (
+        id SERIAL PRIMARY KEY,
+        alert_email VARCHAR(255),
+        sounds_enabled BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
     "UPDATE wifi_networks SET uptime_seconds = 0 WHERE uptime_seconds IS NULL",
     "UPDATE wifi_networks SET first_seen = COALESCE(first_seen, CURRENT_TIMESTAMP)",
     "UPDATE wifi_networks SET last_seen = COALESCE(last_seen, CURRENT_TIMESTAMP)",
@@ -147,18 +156,38 @@ SCHEMA_STATEMENTS = [
 
 SQLITE_MIGRATIONS = [
     ("sensors", "last_heartbeat", "ALTER TABLE sensors ADD COLUMN last_heartbeat DATETIME"),
+    ("notification_configs", None, """
+    CREATE TABLE IF NOT EXISTS notification_configs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        alert_email VARCHAR(255),
+        sounds_enabled BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """),
 ]
 
 
 def apply_sqlite_runtime_migrations() -> None:
     inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+    
     with db.engine.begin() as connection:
         for table_name, column_name, statement in SQLITE_MIGRATIONS:
-            existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
-            if column_name in existing_columns:
+            # Case 1: Create table if it doesn't exist
+            if table_name not in existing_tables and column_name is None:
+                LOGGER.info("[DB] Applying SQLite runtime migration: Create table %s", table_name)
+                connection.exec_driver_sql(statement)
+                existing_tables.add(table_name)
                 continue
-            LOGGER.info("[DB] Applying SQLite runtime migration: %s.%s", table_name, column_name)
-            connection.exec_driver_sql(statement)
+                
+            # Case 2: Add column if table exists but column doesn't
+            if table_name in existing_tables and column_name is not None:
+                existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
+                if column_name in existing_columns:
+                    continue
+                LOGGER.info("[DB] Applying SQLite runtime migration: %s.%s", table_name, column_name)
+                connection.exec_driver_sql(statement)
     LOGGER.info("[DB] SQLite runtime schema migrations complete")
 
 

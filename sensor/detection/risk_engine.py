@@ -1,76 +1,87 @@
-# detection/risk_engine.py
-
 class RiskEngine:
     def __init__(self, trusted_aps=None):
-        # If no array comes from API, get from config as backup
         if trusted_aps is None:
             from config import TRUSTED_APS
             self.trusted_aps = TRUSTED_APS
         else:
             self.trusted_aps = trusted_aps
 
+    def normalize_ssid(self, ssid):
+        if not ssid:
+            return ""
+        return ssid.strip().lower().replace("_5g", "").replace("-5g", "")
+
     def analyze(self, event):
-        """
-        Analyzes event and calculates risk score.
-        """
         score = 0
         reasons = []
 
-        ssid = event.get("ssid")
-        bssid = event.get("bssid")
+        ssid_raw = event.get("ssid") or ""
+        ssid = self.normalize_ssid(ssid_raw)
+
+        bssid = (event.get("bssid") or "").lower()
         channel = event.get("channel")
         signal = event.get("signal")
-        encryption = event.get("encryption")
+        encryption = (event.get("encryption") or "").upper()
         clients = event.get("clients", 0)
 
-        # Open network with connected clients
-        if encryption == "OPEN" and clients > 0:
-            score += 5
-            reasons.append("Open network with connected clients")
+        # =========================
+        # Trusted AP CHECK (HARD OVERRIDE)
+        # =========================
+        trusted_key = None
 
-        # Known/trusted network
-        trusted_key = next((key for key in self.trusted_aps.keys() if key.upper() == ssid.upper()), None)
+        for key in self.trusted_aps:
+            if self.normalize_ssid(key) == ssid:
+                trusted_key = key
+                break
+
         if trusted_key:
             trusted = self.trusted_aps[trusted_key]
 
-            # Evil Twin (SSID matches but BSSID different)
-            if bssid.lower() != trusted["bssid"].lower():
-                score += 6
-                reasons.append("Evil Twin suspected (BSSID Spoofing)")
-            else:
-                # Security modification: if attacker copied MAC but changed encryption to OPEN
-                trusted_enc = trusted.get("encryption", "SECURED")
-                if encryption.upper() != trusted_enc.upper():
-                    score += 6
-                    reasons.append(f"Encryption downgrade (Expected {trusted_enc}, got {encryption})")
+            return {
+                "classification": "LEGIT",
+                "score": 0,
+                "reasons": ["Trusted network (whitelisted)"],
+                "ssid": ssid_raw,
+                "bssid": bssid,
+                "channel": channel,
+                "signal": signal,
+                "encryption": encryption,
+                "clients": clients,
+                "manufacturer": event.get("manufacturer", "Unknown"),
+                "uptime": event.get("uptime", ""),
+                "auth": event.get("auth", ""),
+                "wps": event.get("wps", ""),
+                "distance": event.get("distance", -1),
+                "raw_beacon": event.get("raw_beacon", ""),
+            }
 
-            # Channel mismatch
-            if channel != trusted["channel"]:
-                score += 2
-                reasons.append("Channel mismatch")
+        # =========================
+        # Unknown networks scoring
+        # =========================
+        score += 3
+        reasons.append("SSID not trusted")
 
-        # Unknown SSID
-        else:
+        if encryption == "OPEN" and clients > 0:
             score += 3
-            reasons.append("SSID not trusted")
+            reasons.append("Open network with clients")
 
-        # Unusually strong signal
-        if signal is not None and signal > -30:
-            score += 2
-            reasons.append("Unusually strong signal")
+        if signal is not None and signal > -25:
+            score += 1
+            reasons.append("Very strong signal")
 
-        classification = self.classify(score)
+        return self._build_result(event, score, reasons)
 
-        event_summary = {
-            "classification": classification,
+    def _build_result(self, event, score, reasons):
+        return {
+            "classification": self.classify(score),
             "score": score,
             "reasons": reasons,
-            "bssid": bssid,
-            "ssid": ssid,
-            "channel": channel,
-            "signal": signal,
-            "encryption": encryption,
-            "clients": clients,
+            "ssid": event.get("ssid"),
+            "bssid": event.get("bssid"),
+            "channel": event.get("channel"),
+            "signal": event.get("signal"),
+            "encryption": event.get("encryption"),
+            "clients": event.get("clients", 0),
             "manufacturer": event.get("manufacturer", "Unknown"),
             "uptime": event.get("uptime", ""),
             "auth": event.get("auth", ""),
@@ -78,8 +89,6 @@ class RiskEngine:
             "distance": event.get("distance", -1),
             "raw_beacon": event.get("raw_beacon", ""),
         }
-
-        return event_summary
 
     def classify(self, score):
         if score >= 6:

@@ -11,7 +11,6 @@ from routes_dashboard import active_networks_bp, dashboard_bp
 from routes_alerts import alerts_bp
 from routes_incidents import incidents_bp
 from routes_topology import topology_bp
-from notification_routes import notifications_bp
 
 def register_blueprints(app):
     """
@@ -36,8 +35,6 @@ def register_blueprints(app):
     
     # Network Topology Visualization
     app.register_blueprint(topology_bp)
-    
-    # Notification & Alert Configuration
-    app.register_blueprint(notifications_bp)
+
     
     print("[API] All database-backed blueprints registered successfully")

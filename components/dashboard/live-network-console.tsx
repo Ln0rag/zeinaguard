@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, AlertTriangle, Radio, Wifi, WifiOff, Zap } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowUpDown, Radio, Wifi, WifiOff, Zap, Server, Shield, Target, Clock, Search, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   useSocket,
   type AttackAckEvent,
@@ -16,7 +17,8 @@ import {
 } from '@/hooks/use-socket';
 
 
-type ClassificationFilter = 'ALL' | 'ROGUE' | 'SUSPICIOUS' | 'LEGIT';
+type SortField = 'ssid' | 'bssid' | 'signal' | 'classification' | 'last_seen';
+type SortDirection = 'asc' | 'desc';
 
 interface ActivityItem {
   id: string;
@@ -24,6 +26,14 @@ interface ActivityItem {
   title: string;
   detail: string;
   timestamp: string;
+}
+
+interface TelemetryData {
+  sensorStatus: 'online' | 'offline' | 'warning';
+  backendStatus: 'connected' | 'disconnected' | 'error';
+  discoveredNetworks: number;
+  activeAttacks: number;
+  lastUpdate: string;
 }
 
 
@@ -102,6 +112,31 @@ function classificationClasses(classification: LiveNetworkEvent['classification'
   return 'bg-emerald-950 text-emerald-100 border border-emerald-700';
 }
 
+function TelemetryStatusBadge({ status, icon, label }: { status: string; icon: React.ReactNode; label: string }) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online':
+      case 'connected':
+        return 'text-emerald-400 bg-emerald-950/50 border-emerald-700/50';
+      case 'offline':
+      case 'disconnected':
+        return 'text-red-400 bg-red-950/50 border-red-700/50';
+      case 'warning':
+      case 'error':
+        return 'text-amber-400 bg-amber-950/50 border-amber-700/50';
+      default:
+        return 'text-slate-400 bg-slate-950/50 border-slate-700/50';
+    }
+  };
+
+  return (
+    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium ${getStatusColor(status)}`}>
+      {icon}
+      <span>{label}</span>
+    </div>
+  );
+}
+
 
 function normalizeNetwork(network: LiveNetworkEvent): LiveNetworkEvent {
   return {
@@ -119,9 +154,31 @@ export function LiveNetworkConsole() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [hasNetworkSnapshot, setHasNetworkSnapshot] = useState(false);
   const [hasSensorSnapshot, setHasSensorSnapshot] = useState(false);
-  const [filter, setFilter] = useState<ClassificationFilter>('ALL');
   const [huntTarget, setHuntTarget] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
   const [attackState, setAttackState] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setIsSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  const [sortField, setSortField] = useState<SortField>('last_seen');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [telemetry, setTelemetry] = useState<TelemetryData>({
+    sensorStatus: 'offline',
+    backendStatus: 'disconnected',
+    discoveredNetworks: 0,
+    activeAttacks: 0,
+    lastUpdate: new Date().toISOString()
+  });
 
   const signalHistoryRef = useRef<Record<string, number[]>>({});
 
@@ -133,6 +190,30 @@ export function LiveNetworkConsole() {
 
   const appendActivity = (item: ActivityItem) => {
     setActivity((current) => [item, ...current].slice(0, 20));
+  };
+
+  const updateTelemetry = () => {
+    const onlineSensors = sensorStatuses.filter(s => s.status === 'online').length;
+    const totalSensors = sensorStatuses.length;
+    
+    let sensorStatus: 'online' | 'offline' | 'warning' = 'offline';
+    if (onlineSensors === totalSensors && totalSensors > 0) {
+      sensorStatus = 'online';
+    } else if (onlineSensors > 0) {
+      sensorStatus = 'warning';
+    }
+
+    const activeAttacks = networks.filter(n => 
+      n.classification === 'ROGUE'
+    ).length;
+
+    setTelemetry({
+      sensorStatus,
+      backendStatus: 'connected', // Will be updated based on actual connection status
+      discoveredNetworks: networks.length,
+      activeAttacks,
+      lastUpdate: new Date().toISOString()
+    });
   };
 
   const trackSignalHistory = (snapshot: LiveNetworkEvent[]) => {
@@ -251,6 +332,11 @@ export function LiveNetworkConsole() {
 
   const loading = !hasNetworkSnapshot;
 
+  // Update telemetry when networks, sensors, or connection status changes
+  useEffect(() => {
+    updateTelemetry();
+  }, [networks, sensorStatuses, isConnected]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -286,17 +372,91 @@ export function LiveNetworkConsole() {
     };
   }, [apiBase]);
 
-  const networkList = useMemo(() => {
-    const filtered = filter === 'ALL'
-      ? networks
-      : networks.filter((network) => network.classification === filter);
+  const suggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase().trim();
+    return networks
+      .filter(n => 
+        (n.ssid || 'Hidden').toLowerCase().includes(query) || 
+        n.bssid.replace(/[:-]/g, '').toUpperCase().includes(query.replace(/[:-]/g, '').toUpperCase())
+      )
+      .slice(0, 5); // Limit to 5 suggestions
+  }, [searchQuery, networks]);
 
-    return [...filtered].sort((left, right) => {
-      const leftTime = new Date(left.last_seen).getTime();
-      const rightTime = new Date(right.last_seen).getTime();
-      return rightTime - leftTime;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Enter') {
+      if (focusedSuggestionIndex >= 0 && suggestions[focusedSuggestionIndex]) {
+        setSearchQuery(suggestions[focusedSuggestionIndex].ssid || suggestions[focusedSuggestionIndex].bssid);
+        setShowSuggestions(false);
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const networkList = useMemo(() => {
+    let filtered = [...networks];
+
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase().trim();
+      
+      filtered = filtered.filter((network) => {
+        const ssidMatch = (network.ssid || 'Hidden').toLowerCase().includes(query);
+        
+        // Normalize MAC for comparison (handles colons, hyphens, and partials)
+        const normalizedQuery = query.replace(/[:-]/g, '').toUpperCase();
+        const normalizedBssid = network.bssid.replace(/[:-]/g, '').toUpperCase();
+        const bssidMatch = normalizedBssid.includes(normalizedQuery);
+
+        return ssidMatch || bssidMatch;
+      });
+    }
+
+    return filtered.sort((left, right) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case 'ssid':
+          comparison = (left.ssid || 'Hidden').localeCompare(right.ssid || 'Hidden');
+          break;
+        case 'bssid':
+          comparison = left.bssid.localeCompare(right.bssid);
+          break;
+        case 'signal':
+          const leftSignal = left.signal ?? -999;
+          const rightSignal = right.signal ?? -999;
+          comparison = leftSignal - rightSignal;
+          break;
+        case 'classification':
+          comparison = left.classification.localeCompare(right.classification);
+          break;
+        case 'last_seen':
+          const leftTime = new Date(left.last_seen).getTime();
+          const rightTime = new Date(right.last_seen).getTime();
+          comparison = leftTime - rightTime;
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [filter, networks]);
+  }, [networks, sortField, sortDirection]);
 
   const huntedNetwork = useMemo(() => {
     const normalized = huntTarget.trim().toUpperCase();
@@ -331,267 +491,329 @@ export function LiveNetworkConsole() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-slate-400">Live Networks</CardDescription>
-            <CardTitle className="text-3xl text-white">{networks.length}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-slate-400">Snapshot replaces the entire live network table every second</CardContent>
-        </Card>
-        <Card className="bg-red-950/50 border-red-900">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-red-200">Rogue</CardDescription>
-            <CardTitle className="text-3xl text-red-50">{rogueCount}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-red-200">Immediate response candidates</CardContent>
-        </Card>
-        <Card className="bg-amber-950/50 border-amber-900">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-amber-200">Suspicious</CardDescription>
-            <CardTitle className="text-3xl text-amber-50">{suspiciousCount}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-amber-200">Watchlist targets</CardContent>
-        </Card>
-        <Card className="bg-emerald-950/50 border-emerald-900">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-emerald-200">Sensors Online</CardDescription>
-            <CardTitle className="text-3xl text-emerald-50">{onlineSensors}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-emerald-200">{legitCount} legit networks in scope</CardContent>
-        </Card>
-      </div>
-
-      <div className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
-        isConnected() ? 'border-emerald-700 bg-emerald-950/40 text-emerald-100' : 'border-red-700 bg-red-950/40 text-red-100'
-      }`}>
-        <div className="flex items-center gap-3">
-          {isConnected() ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-          <span className="font-medium">{isConnected() ? 'Realtime pipeline connected' : 'Realtime pipeline reconnecting'}</span>
-        </div>
-        <span className="text-sm opacity-80">Sensor {'->'} Backend {'->'} Dashboard</span>
-      </div>
-
+    <div className="space-y-6 mt-2">
+      
+      
       {attackState && (
         <Card className="border-slate-700 bg-slate-900">
           <CardContent className="pt-6 text-sm text-slate-200">{attackState}</CardContent>
         </Card>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <CardTitle className="text-white">Live Network Table</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Real-time state rendered directly from backend snapshots
-                </CardDescription>
+      <Card className="bg-slate-900 overflow-hidden border-none shadow-none py-0">
+          <CardHeader className="p-0 border-none bg-transparent">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+              {/* Left Section: Title & Search */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1 w-full">
+                <CardTitle className="text-white text-xl font-bold tracking-tight whitespace-nowrap">
+                  ZeinaGuard Live
+                </CardTitle>
+
+                <div className="relative w-full flex-1">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                    {isSearching ? (
+                      <Loader2 className="h-4 w-4 text-cyan-500 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4 text-slate-500" />
+                    )}
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="Search SSID or MAC address..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowSuggestions(true);
+                      setFocusedSuggestionIndex(-1);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={() => {
+                      setTimeout(() => setShowSuggestions(false), 200);
+                    }}
+                    className="h-10 pl-10 pr-10 w-full bg-slate-950/40 border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus-visible:ring-cyan-600/30 focus-visible:border-cyan-600/50 transition-all"
+                    aria-label="Search networks"
+                    aria-describedby="search-description"
+                    aria-autocomplete="list"
+                    aria-controls="search-suggestions"
+                    aria-expanded={showSuggestions && suggestions.length > 0}
+                  />
+                  
+                  {/* Suggestions Dropdown */}
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div 
+                      id="search-suggestions"
+                      className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+                      role="listbox"
+                    >
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={suggestion.bssid}
+                          className={`w-full px-4 py-3 text-left text-sm flex flex-col gap-1 transition-colors border-b border-slate-800 last:border-0 ${
+                            index === focusedSuggestionIndex ? 'bg-cyan-600/20 text-white' : 'text-slate-300 hover:bg-slate-800/80'
+                          }`}
+                          onClick={() => {
+                            setSearchQuery(suggestion.ssid || suggestion.bssid);
+                            setShowSuggestions(false);
+                          }}
+                          role="option"
+                          aria-selected={index === focusedSuggestionIndex}
+                        >
+                          <span className="font-bold text-white">
+                            {suggestion.ssid || 'Hidden'}
+                          </span>
+                          <span className="text-xs text-cyan-400/70 font-mono">
+                            {suggestion.bssid}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                  <span id="search-description" className="sr-only">
+                    Search for WiFi networks by SSID or BSSID MAC address. Results update in real-time.
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {(['ALL', 'ROGUE', 'SUSPICIOUS', 'LEGIT'] as ClassificationFilter[]).map((value) => (
-                  <Button
-                    key={value}
-                    type="button"
-                    variant={filter === value ? 'default' : 'outline'}
-                    className={filter === value ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 'border-slate-700 bg-slate-950 text-slate-200 hover:bg-slate-800'}
-                    onClick={() => setFilter(value)}
-                  >
-                    {value}
-                  </Button>
-                ))}
+              
+              {/* Right Section: Telemetry */}
+              <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+                <TelemetryStatusBadge 
+                  status={telemetry.sensorStatus}
+                  icon={<Shield className="w-3.5 h-3.5" />}
+                  label={`Sensor ${telemetry.sensorStatus}`}
+                />
+                <TelemetryStatusBadge 
+                  status={telemetry.backendStatus}
+                  icon={<Server className="w-3.5 h-3.5" />}
+                  label={`Backend ${telemetry.backendStatus}`}
+                />
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-slate-700/50 bg-slate-950/30 text-slate-300 text-xs font-medium">
+                  <Wifi className="w-3.5 h-3.5 text-cyan-500" />
+                  <span>{telemetry.discoveredNetworks} Networks</span>
+                </div>
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-slate-700/50 bg-slate-950/30 text-slate-400 text-xs font-medium">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>{new Date().toLocaleTimeString('en-US', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' })} Cairo</span>
+                </div>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0">
             {loading ? (
               <div className="flex h-64 items-center justify-center text-slate-400">
                 <Activity className="mr-2 h-5 w-5 animate-spin" />
                 Waiting for realtime snapshots...
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm text-slate-200">
-                  <thead className="text-left text-xs uppercase tracking-wide text-slate-400">
-                    <tr>
-                      <th className="px-3 py-3">SSID</th>
-                      <th className="px-3 py-3">BSSID</th>
-                      <th className="px-3 py-3">Signal</th>
-                      <th className="px-3 py-3">Class</th>
-                      <th className="px-3 py-3">Last Seen</th>
-                      <th className="px-3 py-3">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="overflow-x-auto border border-slate-600/30 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm">
+                <div className="w-full">
+                  {/* Mobile Card View */}
+                  <div className="block lg:hidden">
                     {networkList.map((network) => (
-                      <tr key={network.bssid} className="border-t border-slate-800">
-                        <td className="px-3 py-3 font-medium text-white">{network.ssid || 'Hidden'}</td>
-                        <td className="px-3 py-3 font-mono text-xs text-slate-300">{network.bssid}</td>
-                        <td className="px-3 py-3">{network.signal ?? 'N/A'} dBm</td>
-                        <td className="px-3 py-3">
-                          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${classificationClasses(network.classification)}`}>
-                            {network.classification}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-slate-300">{relativeLastSeen(network.last_seen)}</td>
-                        <td className="px-3 py-3">
+                      <div key={network.bssid} className="border-b border-slate-700/50 p-4 last:border-b-0">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="font-semibold text-white text-sm">
+                              {network.ssid || 'Hidden'}
+                            </div>
+                            <span className={`rounded-full px-2 py-1 text-xs font-semibold ${classificationClasses(network.classification)}`}>
+                              {network.classification}
+                            </span>
+                          </div>
                           <Button
                             type="button"
                             size="sm"
-                            className="bg-red-600 text-white hover:bg-red-500"
+                            className="bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25 transition-all duration-200"
                             onClick={() => handleAttack(network)}
                           >
                             Attack
                           </Button>
-                        </td>
-                      </tr>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-slate-800/50 rounded px-2 py-1">
+                            <span className="text-slate-400">BSSID:</span>
+                            <span className="ml-1 font-mono text-cyan-300">{network.bssid}</span>
+                          </div>
+                          <div className="bg-slate-800/50 rounded px-2 py-1">
+                            <span className="text-slate-400">Signal:</span>
+                            <span className="ml-1 text-white">{network.signal ?? 'N/A'} dBm</span>
+                          </div>
+                          <div className="bg-slate-800/50 rounded px-2 py-1 col-span-2">
+                            <span className="text-slate-400">Last Seen:</span>
+                            <span className="ml-1 text-white">{relativeLastSeen(network.last_seen)}</span>
+                          </div>
+                        </div>
+                      </div>
                     ))}
                     {networkList.length === 0 && (
-                      <tr>
-                        <td className="px-3 py-10 text-center text-slate-500" colSpan={6}>
-                          No active networks in the current snapshot
-                        </td>
-                      </tr>
+                      <div className="p-12 text-center text-slate-400 flex flex-col items-center gap-2">
+                        <Search className="h-8 w-8 text-slate-600 mb-2" />
+                        <p className="text-lg font-medium text-slate-300">
+                          {debouncedSearchQuery ? 'No matching networks found' : 'No active networks in snapshot'}
+                        </p>
+                        <p className="text-sm">
+                          {debouncedSearchQuery 
+                            ? `We couldn't find any network matching "${debouncedSearchQuery}"`
+                            : 'Wait for the next realtime update from the sensors'}
+                        </p>
+                        {debouncedSearchQuery && (
+                          <Button 
+                            variant="link" 
+                            className="text-cyan-400 hover:text-cyan-300 mt-2"
+                            onClick={() => setSearchQuery('')}
+                          >
+                            Clear search query
+                          </Button>
+                        )}
+                      </div>
                     )}
-                  </tbody>
-                </table>
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <table className="hidden lg:table w-full">
+                    <thead>
+                      <tr className="border-b border-slate-600/30 bg-gradient-to-r from-slate-800/50 to-slate-700/50">
+                        <th className="px-3 py-2 text-left min-w-[120px] max-w-[300px]">
+                          <button
+                            onClick={() => handleSort('ssid')}
+                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
+                          >
+                            SSID
+                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'ssid' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-2 text-left min-w-[140px] max-w-[350px]">
+                          <button
+                            onClick={() => handleSort('bssid')}
+                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
+                          >
+                            BSSID
+                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'bssid' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-2 text-left min-w-[80px] max-w-[120px]">
+                          <button
+                            onClick={() => handleSort('signal')}
+                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
+                          >
+                            Signal
+                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'signal' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-2 text-left min-w-[80px] max-w-[120px]">
+                          <button
+                            onClick={() => handleSort('classification')}
+                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
+                          >
+                            Class
+                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'classification' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-2 text-left min-w-[100px] max-w-[150px]">
+                          <button
+                            onClick={() => handleSort('last_seen')}
+                            className="flex items-center gap-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors"
+                          >
+                            Last Seen
+                            <ArrowUpDown className={`h-3 w-3 ${sortField === 'last_seen' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                          </button>
+                        </th>
+                        <th className="px-3 py-2 text-left min-w-[80px] max-w-[100px]">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {networkList.map((network, index) => (
+                        <tr 
+                          key={network.bssid} 
+                          className={`border-b border-slate-600/20 hover:bg-gradient-to-r hover:from-slate-800/30 hover:to-slate-700/30 transition-all duration-200 ${
+                            index % 2 === 0 ? 'bg-slate-900/20' : 'bg-slate-800/10'
+                          }`}
+                        >
+                          <td className="px-3 py-2">
+                            <div className="font-semibold text-white text-base truncate">
+                              {network.ssid || 'Hidden'}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="font-mono text-sm text-cyan-300 bg-slate-800/50 rounded px-2 py-1 inline-block truncate">
+                              {network.bssid}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className={`text-base font-medium whitespace-nowrap ${
+                              network.signal && network.signal > -60 ? 'text-emerald-400' :
+                              network.signal && network.signal > -75 ? 'text-amber-400' :
+                              network.signal ? 'text-red-400' : 'text-slate-400'
+                            }`}>
+                              {network.signal ?? 'N/A'} dBm
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className={`rounded-full px-3 py-1 text-sm font-semibold shadow-sm whitespace-nowrap ${classificationClasses(network.classification)}`}>
+                              {network.classification}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="text-base text-slate-300 whitespace-nowrap">
+                              {relativeLastSeen(network.last_seen)}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25 transition-all duration-200 transform hover:scale-105 whitespace-nowrap"
+                              onClick={() => handleAttack(network)}
+                            >
+                              Attack
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      {networkList.length === 0 && (
+                        <tr>
+                          <td className="px-4 py-20 text-center text-slate-400" colSpan={6}>
+                            <div className="flex flex-col items-center gap-2">
+                              <Search className="h-10 w-10 text-slate-600 mb-2" />
+                              <p className="text-xl font-medium text-slate-300">
+                                {debouncedSearchQuery ? 'No matching networks found' : 'No active networks in snapshot'}
+                              </p>
+                              <p className="text-base">
+                                {debouncedSearchQuery 
+                                  ? `We couldn't find any network matching "${debouncedSearchQuery}"`
+                                  : 'Wait for the next realtime update from the sensors'}
+                              </p>
+                              {debouncedSearchQuery && (
+                                <Button 
+                                  variant="link" 
+                                  className="text-cyan-400 hover:text-cyan-300 mt-4"
+                                  onClick={() => setSearchQuery('')}
+                                >
+                                  Clear search query
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
-
-        <div className="space-y-6">
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white">Rogue Hunt Mode</CardTitle>
-              <CardDescription className="text-slate-400">
-                Track one BSSID and watch signal direction in real time
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <input
-                value={huntTarget}
-                onChange={(event) => setHuntTarget(event.target.value)}
-                placeholder="AA:BB:CC:DD:EE:FF"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500"
-              />
-              {huntedNetwork ? (
-                <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm text-slate-400">Signal</div>
-                      <div className="text-2xl font-semibold text-white">{huntedNetwork.signal ?? 'N/A'} dBm</div>
-                    </div>
-                    <div className={`rounded-full px-2 py-1 text-xs font-semibold ${classificationClasses(huntedNetwork.classification)}`}>
-                      {huntedNetwork.classification}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-                      <span>Radar meter</span>
-                      <span>{signalBarWidth(huntedNetwork.signal).toFixed(0)}%</span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-lime-300"
-                        style={{ width: `${signalBarWidth(huntedNetwork.signal)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
-                      <div className="text-xs uppercase tracking-wide text-slate-500">Distance</div>
-                      <div className="mt-1 text-sm text-white">{estimateDistance(huntedNetwork.signal)}</div>
-                    </div>
-                    <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
-                      <div className="text-xs uppercase tracking-wide text-slate-500">Trend</div>
-                      <div className="mt-1 text-sm text-white">
-                        {trendFromHistory(signalHistoryRef.current[huntedNetwork.bssid] || [])}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">
-                  Enter a BSSID from the live table to start hunting.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white">Sensor Status</CardTitle>
-              <CardDescription className="text-slate-400">Live CPU, memory, and uptime from each sensor</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {sensorStatuses.length === 0 ? (
-                <div className="text-sm text-slate-500">Waiting for sensor snapshot...</div>
-              ) : (
-                [...sensorStatuses]
-                  .sort((left, right) => left.sensor_id - right.sensor_id)
-                  .map((sensor) => (
-                    <div key={sensor.sensor_id} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium text-white">Sensor #{sensor.sensor_id}</div>
-                        <div className={`rounded-full px-2 py-1 text-xs ${
-                          sensor.status === 'offline' ? 'bg-red-950 text-red-100' : 'bg-emerald-950 text-emerald-100'
-                        }`}>
-                          {sensor.status}
-                        </div>
-                      </div>
-                      <div className="mt-2 text-xs text-slate-400">
-                        {sensor.interface || 'Unknown interface'} | heartbeat {relativeLastSeen(sensor.last_heartbeat)}
-                      </div>
-                      <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-300">
-                        <div className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-2">
-                          CPU {Number(sensor.cpu ?? 0).toFixed(1)}%
-                        </div>
-                        <div className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-2">
-                          MEM {Number(sensor.memory ?? 0).toFixed(1)}%
-                        </div>
-                        <div className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-2">
-                          UP {sensor.uptime}s
-                        </div>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white">Activity Stream</CardTitle>
-              <CardDescription className="text-slate-400">Threats, commands, acknowledgments, and sensor state changes</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {activity.length === 0 ? (
-                <div className="text-sm text-slate-500">No live activity yet.</div>
-              ) : (
-                activity.map((item) => (
-                  <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5">
-                        {item.type === 'threat' && <AlertTriangle className="h-4 w-4 text-red-400" />}
-                        {item.type === 'command' && <Zap className="h-4 w-4 text-cyan-400" />}
-                        {item.type === 'status' && <Radio className="h-4 w-4 text-emerald-400" />}
-                        {item.type === 'ack' && <Activity className="h-4 w-4 text-lime-400" />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-white">{item.title}</div>
-                        <div className="text-sm text-slate-400">{item.detail}</div>
-                        <div className="mt-1 text-xs text-slate-500">{relativeLastSeen(item.timestamp)}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
     </div>
   );
 }
