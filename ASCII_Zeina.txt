@@ -1,0 +1,42 @@
+# ANSI Color Codes for terminal output formatting
+readonly RESET='\033[0m'           # Reset all formatting
+readonly BOLD='\033[1m'            # Bold text
+readonly DIM='\033[2m'             # Dimmed text
+
+# Status Colors
+readonly GREEN='\033[0;32m'        # Success / Healthy
+readonly RED='\033[0;31m'          # Error / Critical
+readonly YELLOW='\033[1;33m'       # Warning / Caution
+readonly BLUE='\033[0;34m'         # Info / Processing
+readonly CYAN='\033[0;36m'         # Accent / Highlight
+readonly MAGENTA='\033[0;35m'      # Special / Admin
+readonly WHITE='\033[1;37m'        # Bright text
+readonly UNDERLINE='\033[4m'
+
+# Background Colors for critical alerts
+readonly BG_RED='\033[41m'
+readonly BG_GREEN='\033[42m'
+
+# ==============================================================================
+# ASCII Art Banner
+# ==============================================================================
+
+# Function: print_banner
+# Displays stylized ZeinaGuard logo using ASCII art with gradient effect
+print_banner() {
+    clear  # Clear terminal for clean presentation
+    
+    echo ""
+    echo -e "${CYAN}  █████████╗███████╗██╗███╗   ██╗ █████╗ ${MAGENTA}  ██████╗ ██╗   ██╗ █████╗ ██████╗ ██████╗ ${RESET}"
+    echo -e "${CYAN}  ╚════███╔╝██╔════╝██║████╗  ██║██╔══██╗${MAGENTA} ██╔════╝ ██║   ██║██╔══██╗██╔══██╗██╔══██╗${RESET}"
+    echo -e "${CYAN}     ███╔╝  █████╗  ██║██╔██╗ ██║███████║${MAGENTA} ██║  ███╗██║   ██║███████║██████╔╝██║  ██║${RESET}"
+    echo -e "${CYAN}   ███╔╝    ██╔══╝  ██║██║╚██╗██║██╔══██║${MAGENTA} ██║   ██║██║   ██║██╔══██║██╔══██╗██║  ██║${RESET}"
+    echo -e "${CYAN}  █████████╗███████╗██║██║ ╚████║██║  ██║${MAGENTA} ╚██████╔╝╚██████╔╝██║  ██║██║  ██║██████╔╝${RESET}"
+    echo -e "${CYAN}  ╚════════╝╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝${MAGENTA}  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ${RESET}"
+    echo ""
+    echo -e "${DIM}                    Enterprise Wireless Intrusion Prevention System${RESET}"
+    echo -e "${DIM}                              Version 1.0.0 | Build 2026${RESET}"
+    echo ""
+    echo -e "${WHITE}═══════════════════════════════════════════════════════════════════════════════════════════════${RESET}"
+    echo ""
+}

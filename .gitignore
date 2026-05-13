@@ -1,0 +1,79 @@
+# --- Security ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- Build Artifacts ---
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# --- Python / Backend ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.pytest_cache/
+.zeinaguard-runtime/
+
+# --- Docker & Databases ---
+postgres_data/
+pgadmin_data/
+redis_data/
+*.log
+backend/instance/*.db
+backend/instance/zeinaguard.db
+
+# --- System Files ---
+.DS_Store
+Thumbs.db
+
+# --- Editors & IDEs ---
+.vscode/
+.idea/
+*.swp
+
+# --- Sensor Data & Scans ---
+sensor/data_logs/*.csv
+sensor/data_logs/*.json
+
+# --- Testing & Coverage ---
+coverage/
+.coverage
+htmlcov/
+
+# --- Tools Caches & Deployment ---
+.eslintcache
+.vercel/
+
+# --- Network Traffic Captures ---
+*.pcap
+*.pcapng
+
+# --- Other Python Virtual Environments ---
+.venv/
+env/
+venv/
+
+# --- Keys & Certificates ---
+*.pem
+*.key
+*.cert
+*.crt
+
+# --- Node/Package Manager Logs ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- OS & Data Analysis ---
+desktop.ini
+.ipynb_checkpoints/
+
+# --- log files ---
+logs/*.log
