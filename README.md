@@ -123,7 +123,3 @@ pnpm lint         # ESLint
 * The monitor-mode step takes the adapter off NetworkManager. Use it only on a spare adapter, or restore managed mode afterwards.
 * The `make backend`, `make frontend`, and `make sensor` targets are deprecated. Use `zeina.sh`.
 * Use only on networks and devices you own or are authorized to monitor.
-
-## License
-
-Add your preferred license here.
